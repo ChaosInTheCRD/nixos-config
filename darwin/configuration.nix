@@ -15,7 +15,7 @@
     shell = pkgs.zsh;                     # Default shell
   };
 
-  security.pam.enableSudoTouchIdAuth = true;
+  # security.pam.enableSudoTouchIdAuth = true;
 
   # Moved all the global package setup to pkgs/default.nix
 
@@ -109,9 +109,6 @@
       trackpad = {                        # Trackpad settings
         Clicking = true;
         TrackpadRightClick = true;
-      };
-      SoftwareUpdate = {
-        AutomaticallyInstallMacOSUpdates = true;
       };
     };
     activationScripts.postActivation.text = ''sudo chsh -s ${pkgs.zsh}/bin/zsh''; # Since it's not possible to declare default shell, run this command after build
