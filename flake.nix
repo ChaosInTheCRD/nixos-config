@@ -63,5 +63,14 @@
         lib = pkgs.lib;
       };
 
+      darwinConfigurations.macbook-customer-1 = mkDarwin "macbook-customer-1" rec {
+        inherit darwin home-manager;
+        system = "x86_64-darwin";
+        # overriding standard user name to adhere to Venafi IT policy
+        user = "tom.meadows";
+        pkgs = import nixpkgs { inherit system; };
+        lib = pkgs.lib;
+      };
+
     };
 }
