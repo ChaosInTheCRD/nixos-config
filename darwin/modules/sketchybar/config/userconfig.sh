@@ -35,21 +35,19 @@ P_DYNAMIC_ISLAND_DEFAULT_CORNER_RADIUS=12
 # Animation Settings
 P_DYNAMIC_ISLAND_SQUISH_AMOUNT=6
 
-
 #
 ## App Switch Island config
 #
-P_DYNAMIC_ISLAND_APPSWITCH_EXPAND_WIDTH=150 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_APPSWITCH_EXPAND_WIDTH=150     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_APPSWITCH_MAX_EXPAND_WIDTH=200 # Max size when expanded
 P_DYNAMIC_ISLAND_APPSWITCH_EXPAND_HEIGHT=65
 P_DYNAMIC_ISLAND_APPSWITCH_CORNER_RAD=15 # Corner Radius
 P_DYNAMIC_ISLAND_APPSWITCH_ICON_SIZE=0.4
 
-
 #
 ## Volume Island config
 #
-P_DYNAMIC_ISLAND_VOLUME_EXPAND_WIDTH=192 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_VOLUME_EXPAND_WIDTH=192     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_VOLUME_MAX_EXPAND_WIDTH=250 # Max size when expanded
 P_DYNAMIC_ISLAND_VOLUME_DEFAULT_HEIGHT=12
 P_DYNAMIC_ISLAND_VOLUME_EXPAND_HEIGHT=16
@@ -63,7 +61,7 @@ P_DYNAMIC_ISLAND_ICON_VOLUME_MUTED=􀊡
 #
 ## Brightness Island config
 #
-P_DYNAMIC_ISLAND_BRIGHTNESS_EXPAND_WIDTH=192 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_BRIGHTNESS_EXPAND_WIDTH=192     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_BRIGHTNESS_MAX_EXPAND_WIDTH=250 # Max size when expanded
 P_DYNAMIC_ISLAND_BRIGHTNESS_DEFAULT_HEIGHT=12
 P_DYNAMIC_ISLAND_BRIGHTNESS_EXPAND_HEIGHT=16
@@ -72,14 +70,13 @@ P_DYNAMIC_ISLAND_BRIGHTNESS_NORMAL_ICON_COLOR=0xffffffff
 P_DYNAMIC_ISLAND_ICON_BRIGHTNESS_LOW=􀆫
 P_DYNAMIC_ISLAND_ICON_BRIGHTNESS_HIGH=􀆭
 
-
 #
 ## Music Island config
 #
 # Music Info
 P_DYNAMIC_ISLAND_MUSIC_SOURCE="Spotify" # AVAILABLE OPTIONS (case sensitive): Music (apple music), Spotify
 P_DYNAMIC_ISLAND_MUSIC_INFO_DEFAULT_HEIGHT=65
-P_DYNAMIC_ISLAND_MUSIC_INFO_EXPAND_WIDTH=131 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_MUSIC_INFO_EXPAND_WIDTH=131     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_MUSIC_INFO_MAX_EXPAND_WIDTH=270 # Max size when expanded#
 P_DYNAMIC_ISLAND_MUSIC_INFO_EXPAND_HEIGHT=120
 P_DYNAMIC_ISLAND_MUSIC_INFO_CORNER_RAD=34 # Corner Radius
@@ -92,7 +89,7 @@ P_DYNAMIC_ISLAND_MUSIC_RESUME_CORNER_RAD=15 # Corner Radius
 #
 ## WIFI Island config
 #
-P_DYNAMIC_ISLAND_WIFI_EXPAND_WIDTH=150 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_WIFI_EXPAND_WIDTH=150     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_WIFI_MAX_EXPAND_WIDTH=295 # Max size when expanded
 P_DYNAMIC_ISLAND_WIFI_EXPAND_HEIGHT=65
 P_DYNAMIC_ISLAND_WIFI_CORNER_RAD=15 # Corner Radius
@@ -102,28 +99,27 @@ P_DYNAMIC_ISLAND_ICON_WIFI_DISCONNECTED=􀙈
 #
 ## Battery Island config
 #
-P_DYNAMIC_ISLAND_BATTERY_EXPAND_WIDTH=150 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_BATTERY_EXPAND_WIDTH=150     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_BATTERY_MAX_EXPAND_WIDTH=295 # Max size when expanded
 P_DYNAMIC_ISLAND_BATTERY_EXPAND_HEIGHT=65
 P_DYNAMIC_ISLAND_BATTERY_CORNER_RAD=15 # Corner Radius
 P_DYNAMIC_ISLAND_ICON_BATTERY_CONNECTEDAC=􀢋
 P_DYNAMIC_ISLAND_ICON_BATTERY_ONBATTERY=􀺸
 
-
 #
 ## Notification Island Config
 #
-P_DYNAMIC_ISLAND_NOTIFICATION_EXPAND_WIDTH=107 # This value should match the notch size, appearence wise
+P_DYNAMIC_ISLAND_NOTIFICATION_EXPAND_WIDTH=107     # This value should match the notch size, appearence wise
 P_DYNAMIC_ISLAND_NOTIFICATION_MAX_EXPAND_WIDTH=280 # Max size when expanded
 P_DYNAMIC_ISLAND_NOTIFICATION_EXPAND_HEIGHT=140
-P_DYNAMIC_ISLAND_NOTIFICATION_CORNER_RAD=42 # Corner Radius
+P_DYNAMIC_ISLAND_NOTIFICATION_CORNER_RAD=42        # Corner Radius
 P_DYNAMIC_ISLAND_NOTIFICATION_MAX_ALLOWED_BODY=250 # Max allowed body for notification message
 
 ############# THESE VALUES SHOULDN'T BE UNTOUCHED #############
 
 #
 ## Colors
-# 
+#
 P_DYNAMIC_ISLAND_COLOR_WHITE=0xffffffff
 P_DYNAMIC_ISLAND_COLOR_BLACK=0xff000000
 P_DYNAMIC_ISLAND_COLOR_TRANSPARENT=0x00000000
