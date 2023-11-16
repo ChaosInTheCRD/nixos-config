@@ -58,7 +58,7 @@
         inherit darwin home-manager;
         system = "aarch64-darwin";
         # overriding standard user name to adhere to Venafi IT policy
-        user = "tom.meadows";
+        user = "chaosinthecrd";
         pkgs = import nixpkgs { inherit system; };
         lib = pkgs.lib;
       };
