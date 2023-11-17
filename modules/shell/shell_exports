@@ -2,7 +2,7 @@
 
 # PATH
 export PATH=/run/current-system/sw/bin:/opt/homebrew/bin:$PATH
-export PATH=/etc/profiles/per-user/tom.meadows/bin:$PATH
+export PATH=/etc/profiles/per-user/chaosinthecrd/bin:$PATH
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 export DOCKER_HOST=unix:///var/run/docker.sock
 # Defaults
@@ -37,4 +37,4 @@ export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.g
 
 # That stupid thing I need for GPG
 export GPG_TTY=$(tty)
-
+export SSH_AUTH_SOCK=${HOME}/.gnupg/S.gpg-agent.ssh

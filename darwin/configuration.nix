@@ -34,21 +34,22 @@
     };
     taps = [
       "FelixKratz/formulae"
-      "homebrew/cask-drivers"
+      # "homebrew/cask-drivers"
       "homebrew/core"
       "homebrew/cask"
       "homebrew/bundle"
       "homebrew/services"
-      "xwmx/tap"
       "koekeishiya/formulae"
     ];
     brews = [
       "FelixKratz/formulae/sketchybar"
+      "FelixKratz/formulae/borders"
       "koekeishiya/formulae/skhd"
       "koekeishiya/formulae/yabai"
       "ddcctl"
       "ykman"
       "gpg"
+      "openssh"
       "pinentry"
       "blueutil"
       "wifi-password"
@@ -86,6 +87,8 @@
       "sf-symbols"
     ];
   };
+
+  
 
   system = {
     defaults = {

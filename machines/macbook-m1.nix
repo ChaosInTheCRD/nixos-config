@@ -2,7 +2,7 @@
 
   networking = {
     computerName = "Toms MacBook";             # Host name
-    hostName = "WKSMAC151152";
+    hostName = "toms-macbook";
   };
 
 }
