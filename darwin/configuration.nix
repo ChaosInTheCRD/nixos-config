@@ -79,7 +79,8 @@
       "nordpass"
       "logi-options-plus"
       "iterm2"
-      "readdle-spark"
+      # installs new version that I do not like
+      # "readdle-spark"
       "element"
       "zoom"
       "microsoft-teams"
