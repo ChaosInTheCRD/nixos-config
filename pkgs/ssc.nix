@@ -5,8 +5,7 @@ with pkgs;
   home = {
     packages = with pkgs; [
       # Command-line tools
-      go python3 git-crypt cargo yarn protobuf lima goreleaser vulnix protobuf hugo vcluster
-      istioctl
+      witness cosign syft grype 
     ];
   };
 }
