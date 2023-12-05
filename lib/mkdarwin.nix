@@ -9,7 +9,7 @@ darwin.lib.darwinSystem {
     ../machines/${name}.nix
     ../machines/shared.nix
     ../darwin/configuration.nix
-
+    { documentation.enable = false; }
     home-manager.darwinModules.home-manager {
       home-manager.useUserPackages = true;
       home-manager.useGlobalPkgs = true;
