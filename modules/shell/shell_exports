@@ -2,6 +2,7 @@
 
 # PATH
 export PATH=/etc/profiles/per-user/chaosinthecrd/bin:$PATH
+export PATH=/Users/chaosinthecrd/Library/Python/3.9/bin:$PATH 
 export PATH=/run/wrappers/bin:/run/current-system/sw/bin:/opt/homebrew/bin:$PATH
 export PATH=/etc/profiles/per-user/tom.meadows/bin:$PATH
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"

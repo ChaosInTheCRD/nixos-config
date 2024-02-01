@@ -19,6 +19,7 @@
 
 # temporary stuff
 alias argosecret="kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d | pbcopy"
+alias dockernuke='docker kill $(docker ps -q) && docker rm $(docker ps --all -q)'
 
 alias gnvim="goneovim &"
 alias vim="nvim"
@@ -27,6 +28,7 @@ alias watch="watch "
 alias kubectl="kubectl-lock kubectl --"
 alias k="kubectl"
 alias kc="kubectl"
+alias branch='git checkout $(git branch --all | fzf)'
 
 # Yubikey stuff
 alias rgpg="rm -r ~/.gnupg/private-keys-v1.d && killall gpg-agent && gpg-agent --daemon --pinentry-program /opt/homebrew/bin/pinentry"

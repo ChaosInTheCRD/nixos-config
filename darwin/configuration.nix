@@ -14,7 +14,9 @@
     home = "/Users/${user}";
     shell = pkgs.zsh;                     # Default shell
   };
-
+  environment.systemPackages = [ 
+    (import (fetchTarball https://install.devenv.sh/latest)).default
+  ];
   security.pam.enableSudoTouchIdAuth = true;
 
   # Moved all the global package setup to pkgs/default.nix
@@ -52,6 +54,7 @@
       "openssh"
       "pinentry"
       "blueutil"
+      "node"
       "wifi-password"
     ];
     casks = [
@@ -60,7 +63,9 @@
       "orbstack"
       "kitty"
       "gpg-suite"
-      "firefox"
+      "homebrew/cask-versions/firefox-beta"
+      "switchaudio-osx"
+      "oras"
       "google-chrome"
       "now-tv-player"
       "plex"

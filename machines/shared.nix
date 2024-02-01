@@ -16,6 +16,7 @@
   };
 
   nix = {
+    trustedUsers = [ "chaosinthecrd" "root" ];
     package = pkgs.nix;
     gc = {                                # Garbage collection
       automatic = true;
