@@ -4,11 +4,12 @@ sudo yabai --load-sa
 # global settings
 # focus window that your mouse hovers on (disabled due to right click bugs)
 yabai -m config focus_follows_mouse on
-# move mouse to focused window
+
+yabai -m config mouse_follows_focus off
 yabai -m config window_placement second_child
 # floating windows always stay on top
 yabai -m config window_topmost on
-# enable borders (disabled this due to yabai no longer supporting)
+# enable borders
 yabai -m config window_border off
 # no clue what this is
 yabai -m config insert_feedback_color 0xffd75f5f
@@ -32,7 +33,7 @@ yabai -m config external_bar all:28:0
 
 # SIP Required
 # prevent border from being under the active window
-yabai -m config active_window_border_topmost off
+yabai -m config active_window_border_topmost on
 yabai -m config window_shadow on
 yabai -m config window_opacity on
 yabai -m config window_border_width 12
@@ -41,13 +42,14 @@ yabai -m config normal_window_border_color 0xffaaaaaa
 
 # focus window when changing space or display_changed
 # focus window after active space changes
-# yabai -m signal --add event# focus window after active space changes
-yabai -m signal --add event=space_changed action="yabai -m window --focus \$(yabai -m query --windows --space | jq .[0].id)"
+# yabai -m signal --add event=space_changed action="yabai -m window --focus \$(yabai -m query --windows --space | jq .[0].id)"
 
 # focus window after active display changes
 # yabai -m signal --add event=display_changed action="yabai -m window --focus \$(yabai -m query --windows --space | jq .[0].id)"
 
 # apps to not manage (ignore)
+
+yabai -m rule --add app="^Loom Control Menu$" manage=off
 yabai -m rule --add app="^System Preferences$" manage=off
 yabai -m rule --add app="^Archive Utility$" manage=off
 yabai -m rule --add app="^Logi Options$" manage=off
@@ -58,7 +60,6 @@ yabai -m rule --add title='Library' manage=off layer=above
 yabai -m rule --add app='^System Preferences$' manage=off layer=above
 yabai -m rule --add app='Activity Monitor' manage=off layer=above
 yabai -m rule --add app='Finder' manage=off layer=above
-yabai -m rule --add app='Akiflow$' manage=off layer=above
+yabai -m rule --add app='Akiflow' manage=off layer=above
 yabai -m rule --add app='^System Information$' manage=off layer=above
-yabai -m rule --add app="^Firefox$" title="^Opening .*$" manage=on
 borders active_color=0xffAFDCA4 inactive_color=0xffaaaaaa width=9.0 2>/dev/null 1>&2 &

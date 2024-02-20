@@ -37,8 +37,6 @@
     taps = [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
-      "homebrew/core"
-      "homebrew/cask"
       "homebrew/bundle"
       "homebrew/services"
       "koekeishiya/formulae"
@@ -56,6 +54,8 @@
       "blueutil"
       "node"
       "wifi-password"
+      "switchaudio-osx"
+      "oras"
     ];
     casks = [
       "akiflow"
@@ -64,8 +64,6 @@
       "kitty"
       "gpg-suite"
       "homebrew/cask-versions/firefox-beta"
-      "switchaudio-osx"
-      "oras"
       "google-chrome"
       "now-tv-player"
       "plex"
