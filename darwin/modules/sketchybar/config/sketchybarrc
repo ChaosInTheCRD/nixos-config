@@ -4,13 +4,10 @@ source "$HOME/.config/sketchybar/icons.sh" # Loads all defined icons
 
 ITEM_DIR="$HOME/.config/sketchybar/items" # Directory where the items are configured
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
-DYNAMIC_ISLAND_DIR="$HOME/.config/sketchybar/plugins/Dynamic-Island-Sketchybar"
 
 # I don't have SIP disabled
 # SPACE_CLICK_SCRIPT="yabai -m space --focus \$SID 2>/dev/null" # The script that is run for clicking on space components
 
-# Define Dynamic island custom configs here
-source "$DYNAMIC_ISLAND_DIR/config.sh" # Loads Dynamic-Island config
 
 # helper process
 HELPER=git.felix.helper
@@ -18,10 +15,6 @@ killall helper
 cd $HOME/.config/sketchybar/helper && make
 $HOME/.config/sketchybar/helper/helper $HELPER > /dev/null 2>&1 &
 
-ISLANDHELPER=git.crissnb.islandhelper
-killall islandhelper
-cd $DYNAMIC_ISLAND_DIR/helper && make
-$DYNAMIC_ISLAND_DIR/helper/islandhelper $ISLANDHELPER &
 
 FONT="JetBrainsMono Nerd Font"
 
@@ -46,7 +39,7 @@ bar=(
   position=top     
   notch_width=188
   sticky=off       
-  pading_left=10  
+  padding_left=10  
   padding_right=10
   color=0x00000000
 )
@@ -140,29 +133,79 @@ sketchybar --add item clock right                              \
                          label.color="0xffDB686B" \
                          icon.color="0xffDB686B" \
                                                                \
-           --add item wifi right                               \
-           --set wifi    script="$ITEM_DIR/wifi.sh"          \
-                         icon=󰖩                                \
-                         background.color="$BACKGROUND"        \
-                         background.corner_radius=8            \
-                         label.color="0xffF19B53" \
-                         icon.color="0xffF19B53" \
-           --subscribe wifi wifi_change                        \
-                                                               \
+           --add item ip_address right                               \
+           --set ip_address script="$ITEM_DIR/ip_address.sh" \
+                            update_freq=10                     \
+                            icon=󰖩                                \
+                            background.color="$BACKGROUND"        \
+                            background.corner_radius=8            \
+                            label.color="0xffF19B53" \
+                            icon.color="0xffF19B53" \
+                            click_script="open 'x-apple.systempreferences:com.apple.preference.network'" \
+           --subscribe ip_address wifi_change                        \
            --add item battery right                            \
            --set battery script="$ITEM_DIR/battery.sh"       \
                          update_freq=120                       \
                          background.color="$BACKGROUND"        \
                          background.corner_radius=8            \
                          label.color="0xffBB7CD7" \
-                         icon.color="0xffBB7CD7"
-           --subscribe battery system_woke power_source_change
+                         icon.color="0xffBB7CD7" \
+           --subscribe battery system_woke power_source_change \
+           --add item github right \
+           --set github update_freq=120 \
+                      script="$ITEM_DIR/github.sh" \
+                      background.color="$BACKGROUND"        \
+                      background.corner_radius=8            \
+                      label.color="0xff5DADE2" \
+                      icon.color="0xff5DADE2" \
+                      click_script="firefox https://github.com"
+sketchybar --add item spot right \
+           --set spot update_freq=1 \
+                      icon.drawing=off \
+                      updates=on \
+                      script="$ITEM_DIR/spotify.sh" \
+                      background.color="$BACKGROUND"        \
+                      background.corner_radius=8            \
+                      background.padding_left=0
+sketchybar --add item audio right \
+           --set audio update_freq=100 \
+                      script="$ITEM_DIR/audio.sh" \
+                      background.color="$BACKGROUND"        \
+                      background.corner_radius=8            \
+                      background.padding_left=0             \
+                      label.color="0xff48C9B0" \
+                      icon.color="0xff48C9B0" \
+                      click_script="open 'x-apple.systempreferences:com.apple.preference.sound'"
+sketchybar --add item bluetooth right \
+           --set bluetooth update_freq=100 \
+                      script="$ITEM_DIR/bluetooth.sh" \
+                      background.color="$BACKGROUND"        \
+                      background.corner_radius=8            \
+                      background.padding_left=0             \
+                      label.color="0xffF4D03F" \
+                      icon.color="0xffF4D03F" \
+                      click_script="open 'x-apple.systempreferences:com.apple.preference.bluetooth'"
 
+
+# label.color="0xff58D68D" \
+# icon.color="0xff58D68D" \
+# label.color="0xffAF7AC5" \
+# icon.color="0xffAF7AC5" \
+# label.color="0xffF5B041" \
+# icon.color="0xffF5B041" \
+# label.color="0xff5499C7" \
+# icon.color="0xff5499C7" \
+# label.color="0xff58D68D" \
+# icon.color="0xff58D68D" \
+# label.color="0xffAED6F1" \
+# icon.color="0xffAED6F1" \
+# label.color="0xffF5B7B1" \
+# icon.color="0xffF5B7B1" \
+#
 ##### Finalizing Setup #####
 # The below command is only needed at the end of the initial configuration to
 # force all scripts to run the first time, it should never be run in an item script.
 
-source "$DYNAMIC_ISLAND_DIR/item.sh" # Loads Dynamic-Island item
 
 sketchybar --update
 

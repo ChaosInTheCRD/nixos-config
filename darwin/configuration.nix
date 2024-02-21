@@ -14,7 +14,9 @@
     home = "/Users/${user}";
     shell = pkgs.zsh;                     # Default shell
   };
-
+  environment.systemPackages = [ 
+    (import (fetchTarball https://install.devenv.sh/latest)).default
+  ];
   security.pam.enableSudoTouchIdAuth = true;
 
   # Moved all the global package setup to pkgs/default.nix
@@ -34,24 +36,26 @@
     };
     taps = [
       "FelixKratz/formulae"
-      "homebrew/cask-drivers"
-      "homebrew/core"
-      "homebrew/cask"
+      # "homebrew/cask-drivers"
       "homebrew/bundle"
       "homebrew/services"
-      "xwmx/tap"
       "koekeishiya/formulae"
     ];
     brews = [
       "FelixKratz/formulae/sketchybar"
+      "FelixKratz/formulae/borders"
       "koekeishiya/formulae/skhd"
       "koekeishiya/formulae/yabai"
       "ddcctl"
       "ykman"
       "gpg"
+      "openssh"
       "pinentry"
       "blueutil"
+      "node"
       "wifi-password"
+      "switchaudio-osx"
+      "oras"
     ];
     casks = [
       "akiflow"
@@ -59,7 +63,7 @@
       "orbstack"
       "kitty"
       "gpg-suite"
-      "firefox"
+      "homebrew/cask-versions/firefox-beta"
       "google-chrome"
       "now-tv-player"
       "plex"
@@ -78,7 +82,8 @@
       "nordpass"
       "logi-options-plus"
       "iterm2"
-      "readdle-spark"
+      # installs new version that I do not like
+      # "readdle-spark"
       "element"
       "zoom"
       "microsoft-teams"
@@ -86,6 +91,8 @@
       "sf-symbols"
     ];
   };
+
+  
 
   system = {
     defaults = {

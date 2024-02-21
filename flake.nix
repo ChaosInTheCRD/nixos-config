@@ -3,17 +3,18 @@
 
   inputs =                                                                  # All flake references used to build my NixOS setup. These are dependencies.
     {
-      nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";                  # Nix Packages
+      nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";                  # Nix Packages
       nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";                  # Nix Packages
       nixpkgs-wayland.url = "github:nix-community/nixpkgs-wayland";
+
       home-manager = {                                                      # User Package Management
-        url = "github:nix-community/home-manager";
-        inputs.nixpkgs.follows = "nixpkgs";
+        url = "github:nix-community/home-manager/master";
+        inputs.nixpkgs.follows = "nixpkgs-unstable";
       };
 
       darwin = {
         url = "github:lnl7/nix-darwin/master";                              # MacOS Package Management
-        inputs.nixpkgs.follows = "nixpkgs";
+        inputs.nixpkgs.follows = "nixpkgs-unstable";
       };
 
       hyprland = {
@@ -48,6 +49,7 @@
           steam = inputs.nixpkgs-unstable.legacyPackages.${system}.steam;
           lutris = inputs.nixpkgs-unstable.legacyPackages.${system}.lutris;
           looking-glass = inputs.nixpkgs-unstable.legacyPackages.${system}.looking-glass;
+          go = inputs.nixpkgs-unstable.legacyPackages.${system}.go;
         })
       ];
       };
@@ -60,10 +62,8 @@
       };
 
       darwinConfigurations.macbook-m1 = mkDarwin "macbook-m1" rec {
-        inherit darwin home-manager;
+        inherit darwin home-manager user;
         system = "aarch64-darwin";
-        # overriding standard user name to adhere to Venafi IT policy
-        user = "tom.meadows";
         pkgs = import nixpkgs { inherit system; };
         lib = pkgs.lib;
       };
