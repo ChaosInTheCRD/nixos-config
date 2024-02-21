@@ -9,7 +9,7 @@
 }:
 
 let
-  version = "5.7.23";
+  version = "5.9.25";
 
   deps = pkgs: [
     alsa-lib
@@ -63,8 +63,8 @@ let
     inherit version;
 
     src = fetchurl {
-      url = "https://api.snapcraft.io/api/v1/snaps/download/00CQ2MvSr0Ex7zwdGhCYTa0ZLMw3H6hf_168.snap";
-      sha256 = "b6c36996cb0287c18e704426b983dfcbfa5bfdef86ff8ef8b88f6f63556afaad";
+      url = "https://api.snapcraft.io/api/v1/snaps/download/00CQ2MvSr0Ex7zwdGhCYTa0ZLMw3H6hf_172.snap";
+      sha256 = "sha256-ZlInt07bxpsoj5PoEB1IGIPVGE+1tlJaUY8fdnYS7ts=";
     };
 
     nativeBuildInputs = [ squashfsTools ];
