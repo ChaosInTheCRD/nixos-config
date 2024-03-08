@@ -10,7 +10,6 @@ darwin.lib.darwinSystem {
     ../machines/${name}.nix
     ../machines/shared.nix
     ../darwin/configuration.nix
-    ../darwin/modules/linux-builder/linux-builder.nix
 
     { 
       documentation.enable = false; 
