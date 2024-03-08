@@ -19,6 +19,7 @@
 
 # temporary stuff
 alias argosecret="kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d | pbcopy"
+alias dockernuke='docker kill $(docker ps -q) && docker rm $(docker ps --all -q)'
 
 alias gnvim="goneovim &"
 alias vim="nvim"
@@ -27,9 +28,7 @@ alias watch="watch "
 alias kubectl="kubectl-lock kubectl --"
 alias k="kubectl"
 alias kc="kubectl"
-
-# Enable aliases to be sudo’ed
-alias sudo="sudo "
+alias branch='git checkout $(git branch --all | fzf)'
 
 # Yubikey stuff
 alias rgpg="rm -r ~/.gnupg/private-keys-v1.d && killall gpg-agent && gpg-agent --daemon --pinentry-program /opt/homebrew/bin/pinentry"
@@ -47,7 +46,8 @@ alias resketch="brew services restart sketchybar"
 alias stopsketch="brew services stop sketchybar"
 
 # Nix aliases
-alias switch="darwin-rebuild switch --flake $HOME/Git/nixos-config/.#macbook-m1"
+alias dswitch="darwin-rebuild switch --flake /Users/tom.meadows/Git/nixos-config/.#macbook-m1"
+alias nswitch="/run/wrappers/bin/sudo NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake ~/Git/nixos-config/.#desktop --impure"
 # easily update home-manager config
 alias unix="home-manager switch"
 alias nixedit="vim ~/Git/nixos-config/"
@@ -63,10 +63,6 @@ alias cleanup_dsstore="find . -name '*.DS_Store' -type f -ls -delete"
 
 # Disc utils
 alias diskspace_report="df -P -kHl"
-
-# Empty the Trash on all mounted volumes and the main HDD.
-# Also, clear Apple’s System Logs & the useless sleepimage to improve shell startup speed
-alias emptytrash="sudo rm -rfv /Volumes/*/.Trashes; sudo grm -rf $HOME/.Trash; sudo rm -rtv /private/var/log/asl/*.asl; sudo rm /private/var/vm/sleepimage"
 
 # Show/hide hidden files in Finder
 alias showdotfiles="defaults write com.apple.finder AppleShowAllFiles -bool true && killall Finder"

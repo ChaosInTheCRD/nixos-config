@@ -14,7 +14,9 @@
     home = "/Users/${user}";
     shell = pkgs.zsh;                     # Default shell
   };
-
+  environment.systemPackages = [ 
+    (import (fetchTarball https://install.devenv.sh/latest)).default
+  ];
   security.pam.enableSudoTouchIdAuth = true;
 
   # Moved all the global package setup to pkgs/default.nix
@@ -35,8 +37,6 @@
     taps = [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
-      "homebrew/core"
-      "homebrew/cask"
       "homebrew/bundle"
       "homebrew/services"
       "koekeishiya/formulae"
@@ -52,7 +52,10 @@
       "openssh"
       "pinentry"
       "blueutil"
+      "node"
       "wifi-password"
+      "switchaudio-osx"
+      "oras"
     ];
     casks = [
       "akiflow"
@@ -60,7 +63,7 @@
       "orbstack"
       "kitty"
       "gpg-suite"
-      "firefox"
+      "homebrew/cask-versions/firefox-beta"
       "google-chrome"
       "now-tv-player"
       "plex"

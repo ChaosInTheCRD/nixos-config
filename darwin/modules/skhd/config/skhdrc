@@ -75,8 +75,8 @@ shift + ctrl + alt - j : yabai -m window --insert south
 shift + ctrl + alt - k : yabai -m window --insert north
 shift + ctrl + alt - l : yabai -m window --insert east
 
-shift + ctrl + alt - n : osascript -e 'tell application "Spotify" to Next Track'
-shift + ctrl + alt - p : osascript -e 'tell application "Spotify" to Previous Track'
+shift + alt - n : osascript -e 'tell application "Spotify" to Next Track'
+shift + alt - p : osascript -e 'tell application "Spotify" to Previous Track'
 
 shift + ctrl + alt - up : osascript -e 'tell application "Spotify" to set sound volume to 100'
 shift + ctrl + alt - down : osascript -e 'tell application "Spotify" to set sound volume to 20'

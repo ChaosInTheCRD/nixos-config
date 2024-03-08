@@ -9,7 +9,6 @@
       font-awesome
       (nerdfonts.override {
         fonts = [
-          "FiraCode"
           "JetBrainsMono"
         ];
       })
@@ -17,10 +16,10 @@
   };
 
   nix = {
+    trustedUsers = [ "chaosinthecrd" "root" ];
     package = pkgs.nix;
     gc = {                                # Garbage collection
       automatic = true;
-      interval.Day = 7;
       options = "--delete-older-than 7d";
     };
     extraOptions = ''
