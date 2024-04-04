@@ -74,6 +74,11 @@ let
       force_split=2
     }
 
+    misc {
+      disable_hyprland_logo = true
+      disable_splash_rendering = true
+    }
+
     debug {
       damage_tracking=2
     }
@@ -159,10 +164,8 @@ let
 
     exec-once=dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec=hyprctl setcursor Bibata-Modern-Classic 24
-    exec=swww init
-    exec-once=~/.config/swww/randomize.sh ~/Git/nixos-config/wallpapers
-    exec=${pkgs.waybar}/bin/waybar
-    exec-once=systemctl --user start pulseaudio.service
+    exec-once=wpaperd
+    exec-once=${pkgs.waybar}/bin/waybar
 
     exec-once=hyprctl dispatch exec "[workspace 1 silent]" kitty
     exec-once=hyprctl dispatch exec "[workspace 2 silent]" kitty

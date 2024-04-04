@@ -69,11 +69,21 @@ in
 
   hardware.bluetooth.enable = true;
 
-  services.openssh.enable = true;
+  services.openssh = {
+    enable = true;
+  };
 
-  sound.enable = true;
-  hardware.pulseaudio.enable = true;
-  hardware.pulseaudio.support32Bit = true;
+  programs.ssh.startAgent = true;
+
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    # If you want to use JACK applications, uncomment this
+    #jack.enable = true;
+  };
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -99,7 +109,7 @@ in
      wine
      wineWowPackages.waylandFull
      winetricks
-     virtmanager
+     virt-manager
      looking-glass-client
   ];
 
@@ -123,6 +133,8 @@ in
       user="chaosinthecrd"
     '';
   };
+
+  virtualisation.docker.enable = true;
 
   programs.dconf.enable = true;
 
@@ -154,7 +166,6 @@ in
   services.gnome.gnome-keyring.enable = true;
   programs.gnupg.agent = {
     enable = true;
-    pinentryFlavor = "curses";
   };
 
   services.xremap = {

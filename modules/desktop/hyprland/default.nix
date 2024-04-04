@@ -53,7 +53,6 @@ in
       xwayland = {
         enable = true;
       };
-      enableNvidiaPatches = true;
     };
   };
 
