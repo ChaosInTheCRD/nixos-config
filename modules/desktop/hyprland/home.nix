@@ -93,7 +93,7 @@ let
     bind=SUPER,L,exec,${pkgs.swaylock}/bin/swaylock
     bind=SUPER,E,exec,${pkgs.pcmanfm}/bin/pcmanfm
     bind=$mainMod,S,togglefloating,
-    bind=SUPER,Space,exec,/home/chaosinthecrd/.config/rofi/launchers/type-6/launcher.sh
+    bind=SUPER,Space,exec,rofi -show drun
     bind=SUPER,P,pseudo,
     bind=SUPER,R,forcerendererreload
     bind=SUPER SHIFT,R,exec,${pkgs.hyprland}/bin/hyprctl reload

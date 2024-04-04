@@ -40,7 +40,7 @@ in
       swaybg
       wpaperd
       dunst
-      rofi
+      rofi-wayland-unwrapped
       cinnamon.nemo
       colloid-gtk-theme
       colloid-icon-theme

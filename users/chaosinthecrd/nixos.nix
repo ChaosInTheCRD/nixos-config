@@ -102,6 +102,8 @@ in
      gtk3
      gtk4
      nwg-look
+     adwaita-qt
+     adwaita-qt6
      bibata-cursors
      pinentry-curses
      steam
