@@ -5,7 +5,12 @@ with pkgs;
   home = {
     packages = with pkgs; [
       spotify bitwarden _1password-gui pavucontrol pamixer lsof wtype slack thunderbird-unwrapped pamixer
-      pinentry nordpass plex-media-player cartridges gwenview mailspring bluemail playerctl];
+      plex-media-player cartridges gwenview mailspring playerctl docker
+      google-chrome pulseaudio gnupg gpg-tui yubikey-manager ssh-askpass-fullscreen lxqt.lxqt-openssh-askpass
+      libsForQt5.ksshaskpass swaybg wpaperd
+
+      nordpass waterfox
+      ];
 
     pointerCursor = {
       gtk.enable = true;

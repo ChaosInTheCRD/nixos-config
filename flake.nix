@@ -39,6 +39,7 @@
       overlays = [
         (final: prev: {
           nordpass = final.callPackage ./pkgs/nordpass { };
+          waterfox = (import ./pkgs/waterfox { pkgs = pkgs; });
           waybar = inputs.nixpkgs-unstable.legacyPackages.${system}.waybar;
           swww = inputs.nixpkgs-unstable.legacyPackages.${system}.swww;
           _1password-gui = inputs.nixpkgs-unstable.legacyPackages.${system}._1password-gui;

@@ -25,7 +25,8 @@ export KUBECONFIG=$HOME/.kube/config
 export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3
 
 # SSH
-export SSH_KEY_PATH="~/.ssh/id_ed25519"
+export SSH_ASKPASS="/etc/profiles/per-user/chaosinthecrd/bin/ksshaskpass"
+export SSH_ASKPASS_REQUIRE="force"
 
 # COSIGN
 export CK=$HOME/.cosign/cosign.key
@@ -39,4 +40,3 @@ export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.g
 
 # That stupid thing I need for GPG
 export GPG_TTY=$(tty)
-export SSH_AUTH_SOCK=${HOME}/.gnupg/S.gpg-agent.ssh
