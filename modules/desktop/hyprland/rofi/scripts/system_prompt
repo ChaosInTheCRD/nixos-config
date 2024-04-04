@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+res=$(echo \
+"lock
+exit
+poweroff
+reboot
+suspend" \
+| rofi -dmenu -p "system")
+
+login_manager="loginctl" # alt: systemctl
+
+case $res in
+"lock")
+    sleep 0.5;
+    ~/.scripts/i3lock_launch;;
+"exit")
+    bspc quit;;
+"poweroff")
+    $login_manager poweroff;;
+"reboot")
+    $login_manager reboot;;
+"suspend")
+    $login_manager suspend;;
+esac 
