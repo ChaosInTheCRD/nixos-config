@@ -14,7 +14,7 @@ in
   # .zshenv
   programs.zsh = {
     enable = true;
-    enableAutosuggestions = true;
+    autosuggestion.enable = true;
     enableCompletion = false;
     history.size = 10000;
     shellAliases = {

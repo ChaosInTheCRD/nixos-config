@@ -52,7 +52,12 @@ if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
   . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
 fi
 # End Nix
-eval `ssh-agent -s`
+
+# Check if YubiKey SSH key is already added to SSH agent
+if ! ssh-add -l >/dev/null 2>&1; then
+    ssh-add -K
+fi
+
 export GPG_TTY=$(tty)
 gpg-connect-agent updatestartuptty /bye >/dev/null
 

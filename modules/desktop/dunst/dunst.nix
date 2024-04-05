@@ -12,10 +12,9 @@
         format = "<b>%s</b>\\n%b";
         frame_color = "#1a1b26";
         frame_width = 5;
-        geometry = "1000x10-5+30";
-        width = 300;
-        height = 100;
-        offset = "20x20";
+        width = "500";
+        height = "300";
+        offset = "30x30";
         horizontal_padding = 8;
         icon_position = "off";
         line_height = 0;
@@ -25,6 +24,7 @@
         separator_height = 2;
         transparency = 10;
         word_wrap = true;
+        corner_radius=8;
       };
 
       urgency_low = {

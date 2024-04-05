@@ -12,4 +12,5 @@ in
   xdg.configFile."swww".source = mkOutOfStoreSymlink "${nixConfigDir}/modules/desktop/hyprland/swww";
   xdg.configFile."rofi".source = mkOutOfStoreSymlink "${nixConfigDir}/modules/desktop/hyprland/rofi";
   xdg.configFile."dolphinrc".source = mkOutOfStoreSymlink "${nixConfigDir}/modules/desktop/hyprland/dolphin/dolphinrc";
+
 }

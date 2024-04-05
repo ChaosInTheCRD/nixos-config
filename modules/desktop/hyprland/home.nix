@@ -61,6 +61,7 @@ let
       kb_layout=us
       follow_mouse=1
       repeat_delay=200
+      repeat_rate=50
       numlock_by_default=1
       accel_profile=flat
       sensitivity=0.8
@@ -90,7 +91,6 @@ let
     bind=$mainMod SHIFT,T,exec,${pkgs.kitty}/bin/kitty
     bind=SUPER,W,killactive,
     bind=SUPER,Escape,exit,
-    bind=SUPER,L,exec,${pkgs.swaylock}/bin/swaylock
     bind=SUPER,E,exec,${pkgs.pcmanfm}/bin/pcmanfm
     bind=$mainMod,S,togglefloating,
     bind=SUPER,Space,exec,rofi -show drun
@@ -165,7 +165,6 @@ let
     exec-once=dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec=hyprctl setcursor Bibata-Modern-Classic 24
     exec-once=wpaperd
-    exec-once=${pkgs.waybar}/bin/waybar
 
     exec-once=hyprctl dispatch exec "[workspace 1 silent]" kitty
     exec-once=hyprctl dispatch exec "[workspace 2 silent]" kitty

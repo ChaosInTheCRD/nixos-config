@@ -4,7 +4,7 @@
 {
   fonts = {
     fontDir.enable = true;
-    fonts = with pkgs; [
+    packages = with pkgs; [
       source-code-pro
       font-awesome
       (nerdfonts.override {
@@ -16,7 +16,9 @@
   };
 
   nix = {
-    trustedUsers = [ "chaosinthecrd" "root" ];
+    settings = {
+      trusted-users = [ "chaosinthecrd" "root" ];
+    };
     package = pkgs.nix;
     gc = {                                # Garbage collection
       automatic = true;
