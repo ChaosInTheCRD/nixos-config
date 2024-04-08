@@ -73,7 +73,11 @@ in
     enable = true;
   };
 
-  programs.ssh.startAgent = true;
+  programs.ssh = {
+    startAgent = true;
+    enableAskPassword = true;
+    askPassword = "/etc/profiles/per-user/chaosinthecrd/bin/ksshaskpass";
+  };
 
   security.rtkit.enable = true;
   services.pipewire = {

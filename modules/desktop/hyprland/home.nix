@@ -78,6 +78,7 @@ let
     misc {
       disable_hyprland_logo = true
       disable_splash_rendering = true
+      focus_on_activate = true
     }
 
     debug {
@@ -164,6 +165,8 @@ let
 
     exec-once=dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP
     exec=hyprctl setcursor Bibata-Modern-Classic 24
+    exec-once=systemctl --user start waybar.service
+    exec-once=systemctl --user start xremap.service
     exec-once=wpaperd
 
     exec-once=hyprctl dispatch exec "[workspace 1 silent]" kitty
