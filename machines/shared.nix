@@ -2,18 +2,6 @@
 { config, pkgs, lib, ... }:
 
 {
-  fonts = {
-    fontDir.enable = true;
-    packages = with pkgs; [
-      source-code-pro
-      font-awesome
-      (nerdfonts.override {
-        fonts = [
-          "JetBrainsMono"
-        ];
-      })
-    ];
-  };
 
   nix = {
     settings = {

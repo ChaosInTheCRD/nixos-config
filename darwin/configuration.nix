@@ -17,15 +17,10 @@
   environment.systemPackages = [ 
     (import (fetchTarball https://install.devenv.sh/latest)).default
   ];
-  security.pam.enableSudoTouchIdAuth = true;
 
   # Moved all the global package setup to pkgs/default.nix
 
   nixpkgs.config.allowBroken = true;
-
-  services = {
-    nix-daemon.enable = true;             # Auto upgrade daemon
-  };
 
   homebrew = {                            # Declare Homebrew using Nix-Darwin
     enable = true;
@@ -37,8 +32,6 @@
     taps = [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
-      "homebrew/bundle"
-      "homebrew/services"
       "koekeishiya/formulae"
     ];
     brews = [
@@ -58,16 +51,18 @@
       "oras"
     ];
     casks = [
+      "firefox"
       "akiflow"
+      "beeper"
       "launchcontrol"
       "orbstack"
       "kitty"
       "gpg-suite"
-      "homebrew/cask-versions/firefox-beta"
       "google-chrome"
       "now-tv-player"
       "plex"
       "steam"
+      "ghostty"
       "alacritty"
       "slack"
       "spotify"
@@ -133,6 +128,6 @@
       };
     };
     activationScripts.postActivation.text = ''sudo chsh -s ${pkgs.zsh}/bin/zsh''; # Since it's not possible to declare default shell, run this command after build
-    stateVersion = 4;
+    stateVersion = 5;
   };
 }
