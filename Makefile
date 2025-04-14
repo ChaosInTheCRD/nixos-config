@@ -1,43 +1,47 @@
+# Mark targets that aren't files
+.PHONY: install update switch bootstrap help
+
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 
 # The name of the nixosConfiguration in the flake
 NIXNAME ?= macbook-m1
 
-# We need to do some OS switching below.
+# Nix installation script
+NIX_INSTALL_URL := https://nixos.org/nix/install
+NIX_INSTALL_SCRIPT := install-nix.sh
+
+# Detect the operating system
 UNAME := $(shell uname)
 
 install:
-	sh <(curl -L https://nixos.org/nix/install)
+	@echo "Installing Nix..."
+	@curl -L $(NIX_INSTALL_URL) -o $(NIX_INSTALL_SCRIPT)
+	@chmod +x $(NIX_INSTALL_SCRIPT)
+	@sh $(NIX_INSTALL_SCRIPT)
+	@rm -f $(NIX_INSTALL_SCRIPT)
+	@echo "Nix installation completed. You may need to restart your shell."
 
 update:
+	@echo "Updating flake..."
 	nix flake update
 
 switch:
 ifeq ($(UNAME), Darwin)
+	@echo "Building and switching Darwin configuration: $(NIXNAME)"
 	nix build ".#darwinConfigurations.${NIXNAME}.system" --impure
 	./result/sw/bin/darwin-rebuild switch --flake "$$(pwd)#${NIXNAME}" --impure
 else
+	@echo "Building and switching NixOS configuration: $(NIXNAME)"
 	sudo NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake ".#${NIXNAME}" --impure
 endif
 
 bootstrap: install update switch
 
-# copy the Nix configurations into the VM.
-vm/copy:
-	rsync -av -e 'ssh $(SSH_OPTIONS) -p$(NIXPORT)' \
-		--exclude='vendor/' \
-		--exclude='.git/' \
-		--exclude='.git-crypt/' \
-		--exclude='iso/' \
-		--rsync-path="sudo rsync" \
-		$(MAKEFILE_DIR)/ $(NIXUSER)@$(NIXADDR):/nix-config
-
-# run the nixos-rebuild switch command. This does NOT copy files so you
-# have to run vm/copy before.
-vm/switch:
-	NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake "/etc/nixos/nixos-config#${NIXNAME}" 
-
-# Build an ISO image
-iso/nixos.iso:
-	cd iso; ./build.sh
+help:
+	@echo "Available targets:"
+	@echo "  install    - Install Nix package manager"
+	@echo "  update     - Run 'nix flake update'"
+	@echo "  switch     - Apply the system configuration (Darwin or NixOS)"
+	@echo "  bootstrap  - Run install, update, and switch in sequence"
+	@echo "  help       - Show this help message"
