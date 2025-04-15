@@ -2,7 +2,7 @@
 shift + alt - r : brew services restart yabai && brew services restart skhd && brew services restart sketchybar
 
 # open kitty
-shift + alt - t : kitty
+shift + alt - t : ghostty
 
 shift + alt - f : firefox
 

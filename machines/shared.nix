@@ -7,6 +7,7 @@
     settings = {
       trusted-users = [ "chaosinthecrd" "root" ];
     };
+
     package = pkgs.nix;
     gc = {                                # Garbage collection
       automatic = true;

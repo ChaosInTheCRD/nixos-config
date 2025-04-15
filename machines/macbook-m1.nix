@@ -5,4 +5,8 @@
     hostName = "toms-macbook";
   };
 
+    fonts.packages = [
+      pkgs.nerd-fonts.jetbrains-mono
+    ];
+
 }

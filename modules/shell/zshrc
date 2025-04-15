@@ -53,13 +53,29 @@ if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
 fi
 # End Nix
 
-# Check if YubiKey SSH key is already added to SSH agent
-if ! ssh-add -l >/dev/null 2>&1; then
-    ssh-add -K
+SSH_ENV="$HOME/.ssh/ssh-agent.env"
+
+# Start the agent if it's not running
+start_agent() {
+  echo "Initializing new SSH agent..."
+  /opt/homebrew/bin/ssh-agent -s > "$SSH_ENV"
+  chmod 600 "$SSH_ENV"
+  . "$SSH_ENV" > /dev/null
+  /opt/homebrew/bin/ssh-add ~/.ssh/id_ed25519_sk_rk
+}
+
+# Load the agent env if available and valid
+if [ -f "$SSH_ENV" ]; then
+  . "$SSH_ENV" > /dev/null
+  ps -p $SSH_AGENT_PID > /dev/null || start_agent
+else
+  start_agent
 fi
 
 export GPG_TTY=$(tty)
 gpg-connect-agent updatestartuptty /bye >/dev/null
+
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # run starship
 # eval "$(starship init zsh)"

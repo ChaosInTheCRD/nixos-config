@@ -33,12 +33,14 @@
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
       "koekeishiya/formulae"
+      "theseal/ssh-askpass"
     ];
     brews = [
       "FelixKratz/formulae/sketchybar"
       "FelixKratz/formulae/borders"
       "koekeishiya/formulae/skhd"
       "koekeishiya/formulae/yabai"
+      "theseal/ssh-askpass/ssh-askpass"
       "ddcctl"
       "ykman"
       "gpg"
@@ -51,6 +53,7 @@
       "oras"
     ];
     casks = [
+      "tailscale"
       "firefox"
       "akiflow"
       "beeper"
@@ -72,17 +75,16 @@
       "via"
       "vlc"
       "visual-studio-code"
+      "tidal"
       "insomnia"
       "nordvpn"
       "nordpass"
-      "logi-options-plus"
       "iterm2"
       # installs new version that I do not like
       # "readdle-spark"
       "element"
       "zoom"
       "microsoft-teams"
-      "yubico-yubikey-manager"
       "sf-symbols"
     ];
   };

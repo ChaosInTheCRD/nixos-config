@@ -11,8 +11,14 @@ NIXNAME ?= macbook-m1
 NIX_INSTALL_URL := https://nixos.org/nix/install
 NIX_INSTALL_SCRIPT := install-nix.sh
 
+NIX_CONFIG := experimental-features = nix-command flakes
+
 # Detect the operating system
 UNAME := $(shell uname)
+
+install-brew:
+	@echo "Installing Homebrew..."
+	@/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 install:
 	@echo "Installing Nix..."
@@ -29,11 +35,11 @@ update:
 switch:
 ifeq ($(UNAME), Darwin)
 	@echo "Building and switching Darwin configuration: $(NIXNAME)"
-	nix build ".#darwinConfigurations.${NIXNAME}.system" --impure
+	NIX_CONFIG="$(NIX_CONFIG)" nix build ".#darwinConfigurations.${NIXNAME}.system" --impure
 	./result/sw/bin/darwin-rebuild switch --flake "$$(pwd)#${NIXNAME}" --impure
 else
 	@echo "Building and switching NixOS configuration: $(NIXNAME)"
-	sudo NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake ".#${NIXNAME}" --impure
+	sudo NIX_CONFIG="$(NIX_CONFIG)" NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake ".#${NIXNAME}" --impure
 endif
 
 bootstrap: install update switch
