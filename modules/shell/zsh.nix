@@ -1,6 +1,10 @@
 # taken from https://github.com/aywrite/nix-config
-{ pkgs, ... }:
+{ config, pkgs, ... }:
 let
+  # stuffing the gitignore stuff in here as well
+  nixConfigDir = "${config.home.homeDirectory}/Git/nixos-config";
+  inherit (config.lib.file) mkOutOfStoreSymlink;
+
   # this idea is from https://github.com/BrianHicks/dotfiles.nix/blob/master/dotfiles/zsh.nix
   extras = [
     ./zshrc
@@ -11,6 +15,8 @@ let
   extraInitExtra = builtins.foldl' (soFar: new: soFar + "\n" + builtins.readFile new) "" extras;
 in
 {
+  xdg.configFile."global-gitignore".source = mkOutOfStoreSymlink "${nixConfigDir}/modules/shell/gitignore";
+
   # .zshenv
   programs.zsh = {
     enable = true;

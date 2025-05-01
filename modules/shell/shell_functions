@@ -4,29 +4,29 @@
 cf() {
   local dir
   dir=$(find ${1:-.} -path '*/\.*' -prune \
-                  -o -type d -print 2> /dev/null | fzf +m) &&
-  cd "$dir" || return
+    -o -type d -print 2>/dev/null | fzf +m) &&
+    cd "$dir" || return
 }
 
 # sync caravan repo
 push-nix() {
-    cd ~/.config/nixpkgs
-    git add .
-    git commit -a -m "$1"
-    git push
-    cd -
-  }
+  cd ~/.config/nixpkgs
+  git add .
+  git commit -a -m "$1"
+  git push
+  cd -
+}
 
 sync-nix() {
-    cd ~/.config/nixpkgs
-    git add .
-    git stash
-    git checkout main
-    git pull origin main
-    git stash pop
-    home-manager switch
-    push-nix "sync-nix performed on $(date)"
-    cd -
+  cd ~/.config/nixpkgs
+  git add .
+  git stash
+  git checkout main
+  git pull origin main
+  git stash pop
+  home-manager switch
+  push-nix "sync-nix performed on $(date)"
+  cd -
 }
 
 kc-patch-secret() {
@@ -57,5 +57,84 @@ new-cosign-image() {
   docker pull $1
   docker tag $1 $2/$1
   docker push $2/$1
-  cosign attest --predicate $HOME/.tmp/cosign/predicate.json --type custom $2/$1 --key $CK 
+  cosign attest --predicate $HOME/.tmp/cosign/predicate.json --type custom $2/$1 --key $CK
+}
+
+ts-deploy() {
+  local base=localhost:5001
+  # extra=""
+  mkdir -p "$HOME/.config/dev"
+  current="$(cat "$HOME/.config/dev/container-version" 2>/dev/null)"
+  if [[ $current =~ ^[0-9]+$ ]]; then
+    local next=$((current + 1))
+  else
+    local next=1
+  fi
+  ctx="$(k config current-context)"
+  echo "$next" >"$HOME/.config/dev/container-version"
+  echo "deploying $next"
+  local repo="$base/k8s-operator"
+  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
+    PLATFORM="" TAGS=$next REPO=$repo make publishdevoperator
+    echo "loading image $repo:$next into kind"
+    docker pull "$repo:$next"
+    kind load docker-image "$repo:$next"
+  else
+    PLATFORM="" TAGS=$next REPO=$repo make publishdevoperator
+  fi
+  # extra+="--set-string operatorConfig.image.repository=$repo "
+  # extra+="--set-string operatorConfig.image.tag=$next "
+
+  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
+    # since it looks for the image in docker, we need to docker pull
+    local repo="$base/tailscale"
+    PLATFORM="" TAGS=$next REPO=$repo make publishdevimage
+
+    echo "loading image $repo:$next into kind"
+    docker pull "$repo:$next"
+    kind load docker-image "$repo:$next"
+  else
+    local repo="$base/tailscale"
+    PLATFORM="" TAGS=$next REPO=$repo make publishdevimage
+  fi
+  # extra+="--set-string proxyConfig.image.repository=$repo "
+  # extra+="--set-string proxyConfig.image.tag=$next "
+  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
+    # since it looks for the image in docker, we need to docker pull
+  fi
+  case $ctx in
+  gke)
+    local hostname=gke-operator
+    ;;
+  eks)
+    local hostname=eks-operator
+    ;;
+  kind)
+    local hostname=kind-operator
+    ;;
+  *)
+    local hostname=operator
+    ;;
+  esac
+  local root="$HOME/Git/tailscale"
+  local localDir="chaosinthecrd"
+  echo "deploying helm chart"
+  helm upgrade --install tailscale-operator "$root/cmd/k8s-operator/deploy/chart" --namespace=tailscale --create-namespace --values="$root/$localDir/values.yaml" --set-string operatorConfig.image.tag=${next} --set-string proxyConfig.image.tag=${next} --set "operatorConfig.hostname=$hostname" --wait
+}
+
+reset_registry() {
+  # Stop and remove any existing registry container
+  echo "Stopping and removing any existing registry container..."
+  docker stop registry 2>/dev/null
+  docker rm registry 2>/dev/null
+
+  # Run Docker registry with the new certificates
+  echo "Deploying the new registry to localhost:5001... (5000 is always used for airplay rubbish...)"
+  docker run -d \
+    --name registry \
+    -p 5001:5001 \
+    -e REGISTRY_HTTP_ADDR=0.0.0.0:5001 \
+    registry:2
+
+  echo "Registry is deployed at https://localhost:5000"
 }
