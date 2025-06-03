@@ -15,9 +15,9 @@
     home = "/Users/${user}";
     shell = pkgs.zsh;                     # Default shell
   };
-  environment.systemPackages = [ 
-    (import (fetchTarball https://install.devenv.sh/latest)).default
-  ];
+  # environment.systemPackages = [ 
+  #   (import (fetchTarball https://install.devenv.sh/latest)).default
+  # ];
 
   # Moved all the global package setup to pkgs/default.nix
 

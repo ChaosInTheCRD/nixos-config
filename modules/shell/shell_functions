@@ -61,8 +61,6 @@ new-cosign-image() {
 }
 
 ts-deploy() {
-  local base=localhost:5001
-  # extra=""
   mkdir -p "$HOME/.config/dev"
   current="$(cat "$HOME/.config/dev/container-version" 2>/dev/null)"
   if [[ $current =~ ^[0-9]+$ ]]; then
@@ -73,43 +71,41 @@ ts-deploy() {
   ctx="$(k config current-context)"
   echo "$next" >"$HOME/.config/dev/container-version"
   echo "deploying $next"
-  local repo="$base/k8s-operator"
   if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
-    PLATFORM="" TAGS=$next REPO=$repo make publishdevoperator
-    echo "loading image $repo:$next into kind"
-    docker pull "$repo:$next"
-    kind load docker-image "$repo:$next"
+    local base=localhost:5001
+    local platform=""
   else
-    PLATFORM="" TAGS=$next REPO=$repo make publishdevoperator
+    local base=europe-west2-docker.pkg.dev/tailscale-sandbox/chaosinthecrd
+    local platform="flyio"
   fi
+
+  local orepo="$base/k8s-operator"
+  local trepo="$base/tailscale"
+
+  PLATFORM=$platform TAGS=$next REPO=$orepo make publishdevoperator
+  PLATFORM=$platform TAGS=$next REPO=$trepo make publishdevimage
+
+  if [ "$ctx" = "kind" ] || [ "$ctx" = "kind-kind" ]; then
+    echo "loading image $repo:$next into kind"
+    docker pull "$orepo:$next"
+    kind load docker-image "$orepo:$next"
+    docker pull "$trepo:$next"
+    kind load docker-image "$trepo:$next"
+  fi
+
   # extra+="--set-string operatorConfig.image.repository=$repo "
   # extra+="--set-string operatorConfig.image.tag=$next "
-
-  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
-    # since it looks for the image in docker, we need to docker pull
-    local repo="$base/tailscale"
-    PLATFORM="" TAGS=$next REPO=$repo make publishdevimage
-
-    echo "loading image $repo:$next into kind"
-    docker pull "$repo:$next"
-    kind load docker-image "$repo:$next"
-  else
-    local repo="$base/tailscale"
-    PLATFORM="" TAGS=$next REPO=$repo make publishdevimage
-  fi
   # extra+="--set-string proxyConfig.image.repository=$repo "
   # extra+="--set-string proxyConfig.image.tag=$next "
-  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
-    # since it looks for the image in docker, we need to docker pull
-  fi
-  case $ctx in
-  gke)
+
+  case "$ctx" in
+  gke_*) # Matches GKE context names like gke_project-zone-cluster
     local hostname=gke-operator
     ;;
-  eks)
+  arn:aws:eks:*) # Matches EKS context names starting with this ARN prefix
     local hostname=eks-operator
     ;;
-  kind)
+  kind-*) # Matches Kind cluster names like kind-test
     local hostname=kind-operator
     ;;
   *)
@@ -119,7 +115,16 @@ ts-deploy() {
   local root="$HOME/Git/tailscale"
   local localDir="chaosinthecrd"
   echo "deploying helm chart"
-  helm upgrade --install tailscale-operator "$root/cmd/k8s-operator/deploy/chart" --namespace=tailscale --create-namespace --values="$root/$localDir/values.yaml" --set-string operatorConfig.image.tag=${next} --set-string proxyConfig.image.tag=${next} --set "operatorConfig.hostname=$hostname" --wait
+  echo "$orepo"
+  echo "$trepo"
+  helm upgrade --install tailscale-operator "$root/cmd/k8s-operator/deploy/chart" \
+    --namespace tailscale \
+    --create-namespace \
+    --values "$root/$localDir/values.yaml" \
+    --set-string operatorConfig.image.tag="$next" \
+    --set-string proxyConfig.image.tag="$next" \
+    --set-string operatorConfig.hostname="$hostname" \
+    --wait
 }
 
 reset_registry() {
