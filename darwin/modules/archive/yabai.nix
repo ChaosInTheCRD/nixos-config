@@ -3,7 +3,7 @@
 {
   services = {
     yabai = {                             # Tiling window manager
-      enable = false;
+      enable = true;
       package = pkgs.yabai;
       config = {                          # Other configuration options
         layout = "bsp";
@@ -40,6 +40,7 @@
         yabai -m rule --add app='Activity Monitor' manage=off layer=above
         yabai -m rule --add app='Finder' manage=off layer=above
         yabai -m rule --add app='^System Information$' manage=off layer=above
+        borders active_color=0xffAFDCA4 inactive_color=0xffaaaaaa width=9.0 2>/dev/null 1>&2 &
       '';                                 # Specific rules for what is managed and layered.
     };
   };

@@ -11,6 +11,9 @@ with pkgs;
       ## Tools that I have needed to install in weird circumstances. I don't actually write
       ## hehehe
       openjdk maven
+
+      # vibes
+      gemini-cli
     ];
   };
 }

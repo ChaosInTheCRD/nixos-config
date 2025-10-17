@@ -109,6 +109,16 @@ sketchybar --add item space_separator left                         \
                                  label.color="0xffCFD6F1" \
            --subscribe front_app front_app_switched
 
+
+sketchybar --add item tsdays left                             \
+           --set tsdays  update_freq=10                        \
+                         icon=󰅐                                \
+                         script="$ITEM_DIR/daysuntil.sh"         \
+                         background.color="$BACKGROUND"        \
+                         background.corner_radius=8            \
+                         label.color="0xffDB686B" \
+                         icon.color="0xffDB686B" \
+
 sketchybar --add bracket spaces "${spaces[@]}" space_separator front_app \
            --set spaces background.color=$BACKGROUND \
                         background.corner_radius=8   \
