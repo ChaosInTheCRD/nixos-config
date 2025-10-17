@@ -9,8 +9,8 @@ let
   extras = [
     ./zshrc
     ./shell_exports
-    ./shell_aliases
     ./shell_functions
+    ./shell_aliases
   ];
   extraInitExtra = builtins.foldl' (soFar: new: soFar + "\n" + builtins.readFile new) "" extras;
 in
@@ -33,7 +33,7 @@ in
       custom = "$HOME/.config/zsh_nix/custom";
     };
 
-    initExtra = ''
+    initContent = ''
       # Spaceship
       source ${pkgs.spaceship-prompt}/share/zsh/site-functions/prompt_spaceship_setup
       autoload -U promptinit; promptinit

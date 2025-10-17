@@ -8,8 +8,8 @@ dirs_to_prepend=(
   "/usr/local/bin"
   "/usr/bin"
   "/bin"
-  "/usr/sbin/
-  /sbin"
+  "/usr/sbin/"
+  "/sbin"
   "/usr/local/sbin"
   "/usr/local/sketchybar/bin"
   "/usr/local/git/bin"
@@ -76,6 +76,7 @@ export GPG_TTY=$(tty)
 gpg-connect-agent updatestartuptty /bye >/dev/null
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
+eval "$(atuin init zsh --disable-up-arrow)"
 
 # run starship
 # eval "$(starship init zsh)"
