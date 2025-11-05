@@ -69,7 +69,7 @@ ts-rec() {
   else
     local next=1
   fi
-  ctx="$(k config current-context)"
+  ctx="$(kubectl config current-context)"
   echo "$next" >"$HOME/.config/dev/recorder-version"
   echo "deploying $next"
   if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
@@ -94,90 +94,6 @@ ts-rec() {
   fi
 
   echo "- $rrepo:$next"
-}
-
-## Tailscale: deploy with helm
-ts-helm() {
-  mkdir -p "$HOME/.config/dev"
-  next="$(cat "$HOME/.config/dev/container-version" 2>/dev/null)"
-  ctx="$(kubectl config current-context)"
-
-  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
-    local base=localhost:5001
-    local platform=""
-  else
-    local base=europe-west2-docker.pkg.dev/tailscale-sandbox/chaosinthecrd
-    local platform="flyio"
-  fi
-
-  local orepo="$base/k8s-operator"
-  local trepo="$base/tailscale"
-  local rrepo="$base/tsrecorder"
-  local prepo="$base/k8s-proxy"
-
-  if [ "$ctx" = "kind" ] || [ "$ctx" = "kind-kind" ]; then
-    echo "loading image $repo:$next into kind"
-    docker pull "$orepo:$next"
-    kind load docker-image "$orepo:$next"
-    docker pull "$trepo:$next"
-    kind load docker-image "$trepo:$next"
-    docker pull "$prepo:$next"
-    kind load docker-image "$prepo:$next"
-    docker pull "$rrepo:$next"
-    kind load docker-image "$rrepo:$next"
-  }
-
-  # extra+="--set-string operatorConfig.image.repository=$repo "
-  # extra+="--set-string operatorConfig.image.tag=$next "
-  # extra+="--set-string proxyConfig.image.repository=$repo "
-  # extra+="--set-string proxyConfig.image.tag=$next "
-
-  case "$ctx" in
-  gke_*) # Matches GKE context names like gke_project-zone-cluster
-    local hostname=gke-operator
-    ;;
-  arn:aws:eks:*) # Matches EKS context names starting with this ARN prefix
-    local hostname=eks-operator
-    ;;
-  kind-*) # Matches Kind cluster names like kind-test
-    local hostname=kind-operator
-    ;;
-  *)
-    local hostname=operator
-    ;;
-  esac
-  local root="$HOME/Git/tailscale"
-  local localDir="chaosinthecrd"
-  echo "deploying helm chart with image:"
-  echo "- $orepo:$next"
-  echo "- $trepo:$next"
-  echo "- $rrepo:$next"
-  echo "- $prepo:$next"
-  echo "deploying with values:"
-  cat -p $root/$localDir/values.yaml
-  helm upgrade --install tailscale-operator "$root/cmd/k8s-operator/deploy/chart" \
-    --namespace tailscale \
-    --create-namespace \
-    --values "$root/$localDir/values.yaml" \
-    --set-string operatorConfig.image.tag="$next" \
-    --set-string proxyConfig.image.tag="$next" \
-    --set-string operatorConfig.hostname="$hostname" \
-    --wait
-}
-
-## Kubectl: apply a yaml string
-function kapply() {
-  # Check if an argument (YAML content) was provided
-  if [ -z "$1" ]; then
-    echo "Error: You must paste the YAML content as the argument." >&2
-    echo "Usage: kapply '... your YAML here ...'" >&2
-    return 1
-  }
-
-  echo "Applying YAML..."
-  # Use ''' "$1"''' to pass the first argument (the YAML string)
-  # directly to standard input of kubectl.
-  echo "$1" | kubectl apply -f -
 }
 
 ## Tailscale: deploy all components
@@ -224,11 +140,6 @@ ts-deploy() {
     docker pull "$rrepo:$next"
     kind load docker-image "$rrepo:$next"
   fi
-
-  # extra+="--set-string operatorConfig.image.repository=$repo "
-  # extra+="--set-string operatorConfig.image.tag=$next "
-  # extra+="--set-string proxyConfig.image.repository=$repo "
-  # extra+="--set-string proxyConfig.image.tag=$next "
 
   case "$ctx" in
   gke_*) # Matches GKE context names like gke_project-zone-cluster

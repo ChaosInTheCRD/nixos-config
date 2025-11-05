@@ -90,3 +90,5 @@ alias findir='cd $(find . -type d -print | fzf)'
 
 # xclip clipboard
 alias xcc='xclip -selection clipboard'
+
+alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"

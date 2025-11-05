@@ -9,8 +9,8 @@ let
   extras = [
     ./zshrc
     ./shell_exports
-    ./shell_functions
     ./shell_aliases
+    ./shell_functions
   ];
   extraInitExtra = builtins.foldl' (soFar: new: soFar + "\n" + builtins.readFile new) "" extras;
 in

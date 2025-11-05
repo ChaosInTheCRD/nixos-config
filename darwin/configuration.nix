@@ -84,6 +84,7 @@
       "zoom"
       "microsoft-teams"
       "sf-symbols"
+      "hiddenbar"
     ];
   };
 
