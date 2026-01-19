@@ -5,52 +5,32 @@ source "$HOME/.config/sketchybar/icons.sh" # Loads all defined icons
 ITEM_DIR="$HOME/.config/sketchybar/items" # Directory where the items are configured
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
-# I don't have SIP disabled
-# SPACE_CLICK_SCRIPT="yabai -m space --focus \$SID 2>/dev/null" # The script that is run for clicking on space components
-
-
 # helper process
 HELPER=git.felix.helper
-killall helper
+killall helper 2>/dev/null
 cd $HOME/.config/sketchybar/helper && make
 $HOME/.config/sketchybar/helper/helper $HELPER > /dev/null 2>&1 &
 
-
 FONT="JetBrainsMono Nerd Font"
-
-# This is a demo config to show some of the most important commands more easily.
-# This is meant to be changed and configured, as it is intentionally kept sparse.
-# For a more advanced configuration ITEMe see my dotfiles:
-# https://github.com/FelixKratz/dotfiles
-
 BACKGROUND="0xff2f343f"
 FOREGROUND="0xffDB686B"
-PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 ##### Bar Appearance #####
-# Configuring the general appearance of the bar, these are only some of the
-# options available. For all options see:
-# https://felixkratz.github.io/SketchyBar/config/bar
-# If you are looking for other colors, see the color picker:
-# https://felixkratz.github.io/SketchyBar/config/tricks#color-picker
-
 bar=(
-  height=50 
-  position=top     
-  notch_width=188
-  sticky=off       
-  padding_left=10  
+  height=40
+  position=top
+  sticky=off
+  padding_left=10
   padding_right=10
   color=0x00000000
+  display=main
+  margin=10
+  notch_width=188
 )
 
 sketchybar --bar "${bar[@]}"
 
 ##### Changing Defaults #####
-# We now change some default values that are applied to all further items
-# For a full list of all available item properties see:
-# https://felixkratz.github.io/SketchyBar/config/items
-
 default=(
   icon.font="$FONT:Regular:15.0"
   icon.color="0xffAFDCA4"
@@ -62,19 +42,14 @@ default=(
   label.padding_right=4
   icon.padding_left=4
   icon.padding_right=4
-  y_offset=5
+  y_offset=0
   background.height=30
 )
 
 sketchybar --default "${default[@]}"
 
 ##### Adding Mission Control Space Indicators #####
-# Now we add some mission control spaces:
-# https://felixkratz.github.io/SketchyBar/config/components#space----associate-mission-control-spaces-with-an-item
-# to indicate active and available mission control spaces
-
 SPACE_ICONS=("" "" "󰈹" "󰒱" "󰆟" "" "" "󰁥" "" "󰆟")
-
 spaces=()
 for i in "${!SPACE_ICONS[@]}"
 do
@@ -83,100 +58,89 @@ do
   sketchybar --add space space.$sid left                                 \
              --set space.$sid associated_space=$sid                      \
                               icon=${SPACE_ICONS[i]}                     \
-                              background.corner_radius=8                 \
-                              background.color=0x30ffffff               \
+                              background.corner_radius=8                  \
+                              background.color=0x30ffffff                \
                               background.drawing=off                     \
                               label.drawing=off                          \
-                              script="$ITEM_DIR/space.sh"              \
+                              script="$ITEM_DIR/space.sh"                \
                               click_script="yabai -m space --focus $sid"
 done
 
-
 ##### Adding Left Items #####
-# We add some regular items to the left side of the bar
-# only the properties deviating from the current defaults need to be set
-
-sketchybar --add item space_separator left                         \
-           --set space_separator icon=                            \
-                                 padding_left=10                   \
-                                 label.drawing=off                 \
-                                 icon.color="0xffCFD6F1" \
-                                                                   \
-           --add item front_app left                               \
-           --set front_app       script="$ITEM_DIR/front_app.sh" \
-                                 icon.drawing=off                  \
-                                 background.color="$BACKGROUND"    \
-                                 label.color="0xffCFD6F1" \
+sketchybar --add item space_separator left                           \
+           --set space_separator icon=                              \
+                                 padding_left=10                     \
+                                 label.drawing=off                   \
+                                 icon.color="0xffCFD6F1"             \
+                                                                     \
+           --add item front_app left                                 \
+           --set front_app       script="$ITEM_DIR/front_app.sh"     \
+                                 icon.drawing=off                    \
+                                 background.color="$BACKGROUND"      \
+                                 label.color="0xffCFD6F1"            \
            --subscribe front_app front_app_switched
 
-
-sketchybar --add item tsdays left                             \
-           --set tsdays  update_freq=10                        \
-                         icon=󰅐                                \
-                         script="$ITEM_DIR/daysuntil.sh"         \
-                         background.color="$BACKGROUND"        \
-                         background.corner_radius=8            \
-                         label.color="0xffDB686B" \
-                         icon.color="0xffDB686B" \
+# This is the "inner-most" item on the left.
+# padding_right=100 creates the gap for the left side of the notch.
+sketchybar --add item tsdays left                                    \
+           --set tsdays  update_freq=10                              \
+                         icon=󰅐                                       \
+                         script="$ITEM_DIR/daysuntil.sh"             \
+                         background.color="$BACKGROUND"              \
+                         background.corner_radius=8                  \
+                         label.color="0xffDB686B"                    \
+                         icon.color="0xffDB686B"                     \
+                         padding_right=100
 
 sketchybar --add bracket spaces "${spaces[@]}" space_separator front_app \
            --set spaces background.color=$BACKGROUND \
                         background.corner_radius=8   \
 
 ##### Adding Right Items #####
-# In the same way as the left items we can add items to the right side.
-# Additional position (e.g. center) are available, see:
-# https://felixkratz.github.io/SketchyBar/config/items#adding-items-to-sketchybar
+sketchybar --add graph rain_chart right 100 \
+           --set rain_chart update_freq=120 \
+                 script="$ITEM_DIR/rain.sh" \
+                 icon=󰖗 \
+                 icon.padding_left=10 \
+                 background.color="$BACKGROUND" \
+                 background.corner_radius=8 \
+                 background.drawing=on \
+                 background.border_width=0 \
+                 graph.color=0xff5DADE2 \
+                 graph.fill_color=0x555DADE2 \
+                 graph.line_width=2 \
+                 label.drawing=off
 
-# Some items refresh on a fixed cycle, e.g. the clock runs its script once
-# every 10s. Other items respond to events they subscribe to, e.g. the
-# volume.sh script is only executed once an actual change in system audio
-# volume is registered. More info about the event system can be found here:
-# https://felixkratz.github.io/SketchyBar/config/events
-
-sketchybar --add item clock right                              \
-           --set clock   update_freq=10                        \
-                         icon=󰅐                                \
-                         script="$ITEM_DIR/clock.sh"         \
-                         background.color="$BACKGROUND"        \
-                         background.corner_radius=8            \
-                         label.color="0xffDB686B" \
-                         icon.color="0xffDB686B" \
-                                                               \
-           --add item ip_address right                               \
-           --set ip_address script="$ITEM_DIR/ip_address.sh" \
-                            update_freq=10                     \
-                            icon=󰖩                                \
-                            background.color="$BACKGROUND"        \
-                            background.corner_radius=8            \
-                            label.color="0xffF19B53" \
-                            icon.color="0xffF19B53" \
+sketchybar --add item clock right                                     \
+           --set clock   update_freq=10                               \
+                         icon=󰅐                                       \
+                         script="$ITEM_DIR/clock.sh"                  \
+                         background.color="$BACKGROUND"               \
+                         background.corner_radius=8                   \
+                         label.color="0xffDB686B"                     \
+                         icon.color="0xffDB686B"                      \
+                                                                      \
+           --add item ip_address right                                \
+           --set ip_address script="$ITEM_DIR/ip_address.sh"          \
+                            update_freq=10                            \
+                            icon=󰖩                                       \
+                            background.color="$BACKGROUND"            \
+                            background.corner_radius=8                \
+                            label.color="0xffF19B53"                  \
+                            icon.color="0xffF19B53"                  \
                             click_script="open 'x-apple.systempreferences:com.apple.preference.network'" \
-           --subscribe ip_address wifi_change                        \
-           --add item battery right                            \
-           --set battery script="$ITEM_DIR/battery.sh"       \
-                         update_freq=120                       \
-                         background.color="$BACKGROUND"        \
-                         background.corner_radius=8            \
-                         label.color="0xffBB7CD7" \
-                         icon.color="0xffBB7CD7" \
-           --subscribe battery system_woke power_source_change \
-           --add item github right \
-           --set github update_freq=120 \
-                      script="$ITEM_DIR/github.sh" \
-                      background.color="$BACKGROUND"        \
-                      background.corner_radius=8            \
-                      label.color="0xff5DADE2" \
-                      icon.color="0xff5DADE2" \
-                      click_script="firefox https://github.com"
-sketchybar --add item spot right \
-           --set spot update_freq=1 \
-                      icon.drawing=off \
-                      updates=on \
-                      script="$ITEM_DIR/spotify.sh" \
-                      background.color="$BACKGROUND"        \
-                      background.corner_radius=8            \
-                      background.padding_left=0
+           --subscribe ip_address wifi_change                         \
+           --add item battery right                                   \
+           --set battery script="$ITEM_DIR/battery.sh"                \
+                         update_freq=120                              \
+                         background.color="$BACKGROUND"               \
+                         background.corner_radius=8                   \
+                         label.color="0xffBB7CD7"                     \
+                         icon.color="0xffBB7CD7"                      \
+           --subscribe battery system_woke power_source_change
+
+# This is the "inner-most" item on the right. 
+# padding_left=100 creates the gap for the right side of the notch.
 sketchybar --add item audio right \
            --set audio update_freq=100 \
                       script="$ITEM_DIR/audio.sh" \
@@ -185,37 +149,8 @@ sketchybar --add item audio right \
                       background.padding_left=0             \
                       label.color="0xff48C9B0" \
                       icon.color="0xff48C9B0" \
+                      padding_left=100 \
                       click_script="open 'x-apple.systempreferences:com.apple.preference.sound'"
-sketchybar --add item bluetooth right \
-           --set bluetooth update_freq=100 \
-                      script="$ITEM_DIR/bluetooth.sh" \
-                      background.color="$BACKGROUND"        \
-                      background.corner_radius=8            \
-                      background.padding_left=0             \
-                      label.color="0xffF4D03F" \
-                      icon.color="0xffF4D03F" \
-                      click_script="open 'x-apple.systempreferences:com.apple.preference.bluetooth'"
 
-
-# label.color="0xff58D68D" \
-# icon.color="0xff58D68D" \
-# label.color="0xffAF7AC5" \
-# icon.color="0xffAF7AC5" \
-# label.color="0xffF5B041" \
-# icon.color="0xffF5B041" \
-# label.color="0xff5499C7" \
-# icon.color="0xff5499C7" \
-# label.color="0xff58D68D" \
-# icon.color="0xff58D68D" \
-# label.color="0xffAED6F1" \
-# icon.color="0xffAED6F1" \
-# label.color="0xffF5B7B1" \
-# icon.color="0xffF5B7B1" \
-#
 ##### Finalizing Setup #####
-# The below command is only needed at the end of the initial configuration to
-# force all scripts to run the first time, it should never be run in an item script.
-
-
 sketchybar --update
-

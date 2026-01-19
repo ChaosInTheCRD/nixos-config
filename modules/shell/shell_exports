@@ -1,12 +1,13 @@
 #! /usr/bin/env zsh
 
 # PATH
+export NIXPKGS_ALLOW_UNFREE=1
 export PATH=/etc/profiles/per-user/chaosinthecrd/bin:$PATH
 export PATH=/Users/chaosinthecrd/Library/Python/3.9/bin:$PATH 
 export PATH=/run/wrappers/bin:/run/current-system/sw/bin:/opt/homebrew/bin:$PATH
 export PATH=/etc/profiles/per-user/tom.meadows/bin:$PATH
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
-export DOCKER_HOST="unix://$HOME/.colima/docker.sock"
+xport DOCKER_HOST="unix://$HOME/.colima/docker.sock"
 # Defaults
 export SHELL=zsh
 export EDITOR='nvim'
@@ -40,3 +41,9 @@ export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.g
 
 # That stupid thing I need for GPG
 export GPG_TTY=$(tty)
+
+# Tailscale dev
+export TAILSCALE_REPO="$HOME/Git/tailscale"
+export CORP_REPO="$HOME/Git/corp"
+export VALUES_FILE="$HOME/Git/tailscale/chaosinthecrd/values.yaml"
+export REGISTRY="europe-west2-docker.pkg.dev/tailscale-sandbox/chaosinthecrd"

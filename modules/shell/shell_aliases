@@ -92,3 +92,5 @@ alias findir='cd $(find . -type d -print | fzf)'
 alias xcc='xclip -selection clipboard'
 
 alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+alias ts-deploy="$HOME/Git/k8s-dev-script/deploy.sh"

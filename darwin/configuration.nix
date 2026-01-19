@@ -70,6 +70,7 @@
       "notion"
       "raycast"
       "transmission"
+      "gitify"
       "via"
       "vlc"
       "visual-studio-code"

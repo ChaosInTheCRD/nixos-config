@@ -96,82 +96,6 @@ ts-rec() {
   echo "- $rrepo:$next"
 }
 
-## Tailscale: deploy all components
-ts-deploy() {
-  mkdir -p "$HOME/.config/dev"
-  current="$(cat "$HOME/.config/dev/container-version" 2>/dev/null)"
-  if [[ $current =~ ^[0-9]+$ ]]; then
-    local next=$((current + 1))
-  else
-    local next=1
-  fi
-  ctx="$(k config current-context)"
-  echo "$next" >"$HOME/.config/dev/container-version"
-  echo "deploying $next"
-  if [ $ctx = "kind" ] || [ $ctx = "kind-kind" ]; then
-    local base=localhost:5001
-    local platform=""
-  else
-    local base=europe-west2-docker.pkg.dev/tailscale-sandbox/chaosinthecrd
-    local platform="flyio"
-  fi
-
-  local orepo="$base/k8s-operator"
-  local trepo="$base/tailscale"
-  local rrepo="$base/tsrecorder"
-  local prepo="$base/k8s-proxy"
-
-  PLATFORM=$platform TAGS=$next REPO=$orepo make -C /Users/chaosinthecrd/Git/tailscale publishdevoperator
-  PLATFORM=$platform TAGS=$next REPO=$trepo make -C /Users/chaosinthecrd/Git/tailscale publishdevimage
-  PLATFORM=$platform TAGS=$next REPO=$prepo make -C /Users/chaosinthecrd/Git/tailscale publishdevproxy
-  old=$(pwd)
-  cd /Users/chaosinthecrd/Git/corp/cmd/tsrecorder
-  PUSH=true TAGS=$next REPOS=$rrepo VERSION_GIT_HASH=foo VERSION_PATCH=wi VERSION_MINOR=wih VERSION_MAJOR=wah VERSION_EXTRA_HASH="blah" /Users/chaosinthecrd/Git/corp/cmd/tsrecorder/publish.sh
-  cd $old
-
-  if [ "$ctx" = "kind" ] || [ "$ctx" = "kind-kind" ]; then
-    echo "loading image $repo:$next into kind"
-    docker pull "$orepo:$next"
-    kind load docker-image "$orepo:$next"
-    docker pull "$trepo:$next"
-    kind load docker-image "$trepo:$next"
-    docker pull "$prepo:$next"
-    kind load docker-image "$prepo:$next"
-    docker pull "$rrepo:$next"
-    kind load docker-image "$rrepo:$next"
-  fi
-
-  case "$ctx" in
-  gke_*) # Matches GKE context names like gke_project-zone-cluster
-    local hostname=gke-operator
-    ;;
-  arn:aws:eks:*) # Matches EKS context names starting with this ARN prefix
-    local hostname=eks-operator
-    ;;
-  kind-*) # Matches Kind cluster names like kind-test
-    local hostname=kind-operator
-    ;;
-  *)
-    local hostname=operator
-    ;;
-  esac
-  local root="$HOME/Git/tailscale"
-  local localDir="chaosinthecrd"
-  echo "deploying helm chart with image:"
-  echo "- $orepo:$next"
-  echo "- $trepo:$next"
-  echo "- $rrepo:$next"
-  echo "- $prepo:$next"
-  helm upgrade --install tailscale-operator "$root/cmd/k8s-operator/deploy/chart" \
-    --namespace tailscale \
-    --create-namespace \
-    --values "$root/$localDir/values.yaml" \
-    --set-string operatorConfig.image.tag="$next" \
-    --set-string proxyConfig.image.tag="$next" \
-    --set-string operatorConfig.hostname="$hostname" \
-    --wait
-}
-
 reset_registry() {
   # Stop and remove any existing registry container
   echo "Stopping and removing any existing registry container..."
@@ -186,5 +110,5 @@ reset_registry() {
     -e REGISTRY_HTTP_ADDR=0.0.0.0:5001 \
     registry:2
 
-  echo "Registry is deployed at https://localhost:5000"
+  echo "Registry is deployed at https://localhost:5001"
 }

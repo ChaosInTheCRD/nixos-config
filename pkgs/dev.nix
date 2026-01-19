@@ -13,7 +13,7 @@ with pkgs;
       openjdk maven
 
       # vibes
-      gemini-cli
+      gemini-cli claude-code
     ];
   };
 }
