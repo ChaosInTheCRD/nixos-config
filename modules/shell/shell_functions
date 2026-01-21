@@ -1,6 +1,49 @@
 #!/usr/bin/env bash
 
-# like cd but fuzzy
+# Fuzzy search aliases and functions with descriptions
+halp() {
+  local nixconfig=$HOME/Git/nixos-config/modules/shell
+  local choice
+  local tmpfile=$(mktemp)
+
+  # Build the list
+  awk '
+    /^#/ && !/^# ─/ { desc = substr($0, 3) }
+    /^alias [a-zA-Z]/ {
+      line = $0
+      sub(/^alias /, "", line)
+      eq = index(line, "=")
+      name = substr(line, 1, eq - 1)
+      cmd = substr(line, eq + 1)
+      gsub(/^["\047]|["\047]$/, "", cmd)
+      if (length(cmd) > 40) cmd = substr(cmd, 1, 37) "..."
+      printf "%-18s │ %-40s │ %s\n", name, cmd, (desc != "" ? desc : "-")
+      desc = ""
+    }
+  ' $nixconfig/shell_aliases > $tmpfile
+
+  echo "" >> $tmpfile
+
+  awk '
+    /^#/ && !/^# ─/ { desc = substr($0, 3) }
+    /^[a-zA-Z_][a-zA-Z0-9_-]*\(\)/ {
+      name = $0
+      sub(/\(\).*/, "", name)
+      printf "%-18s │ %-40s │ %s\n", name, "(function)", (desc != "" ? desc : "-")
+      desc = ""
+    }
+  ' $nixconfig/shell_functions >> $tmpfile
+
+  choice=$(cat $tmpfile | fzf --header="Enter=execute")
+  rm -f $tmpfile
+
+  if [[ -n $choice ]]; then
+    local name=$(echo $choice | cut -d'│' -f1 | xargs)
+    print -z $name
+  fi
+}
+
+# Fuzzy cd into directory
 cf() {
   local dir
   dir=$(find ${1:-.} -path '*/\.*' -prune \
@@ -8,44 +51,127 @@ cf() {
     cd "$dir" || return
 }
 
-# sync caravan repo
+# ─────────────────────────────────────────────────────────────
+# Git functions
+# ─────────────────────────────────────────────────────────────
+
+# Git rebase interactive: gri 3 -> git rebase -i HEAD~3
+gri() {
+  if [[ -z $1 ]]; then
+    echo "Usage: gri <number>"
+    return 1
+  fi
+  git rebase -i HEAD~$1
+}
+
+# Git commit with signing: gc "message"
+gc() {
+  git commit -s -S -p -m "$1"
+}
+
+# ─────────────────────────────────────────────────────────────
+# Go functions
+# ─────────────────────────────────────────────────────────────
+
+# Go test with count: gtc 10 -> go test -count 10 -v ./...
+gtc() {
+  go test -count ${1:-1} -v ./...
+}
+
+# Go test with count piped to less: gtcl 100
+gtcl() {
+  go test -count ${1:-1} -v ./... | less
+}
+
+# ─────────────────────────────────────────────────────────────
+# Kubernetes functions
+# ─────────────────────────────────────────────────────────────
+
+# Exec into pod: kex podname or kex podname namespace
+kex() {
+  local pod=$1
+  local ns=${2:-tailscale}
+  kubectl exec -it $pod -n $ns -- /bin/sh
+}
+
+# Apply then edit: kae file.yaml
+kae() {
+  kubectl apply -f $1 && nvim $1
+}
+
+# Edit then apply: kea file.yaml
+kea() {
+  nvim $1 && kubectl apply -f $1
+}
+
+# Stern with grep: sterng "pattern" or sterng "pattern" podname
+sterng() {
+  local pattern=$1
+  local pod=${2:-operator}
+  stern $pod -n tailscale | grep "$pattern"
+}
+
+# Debug pod with busybox: kdebug podname
+kdebug() {
+  local name=${1:-debug-pod}
+  kubectl debug $name -it --image=busybox -n default
+}
+
+# Run curl pod for testing
+kcurl() {
+  kubectl run curlpod --rm -i -t --restart=Never --image=curlimages/curl -n default -- sh
+}
+
+# View secret decoded: ksec secretname namespace
+ksec() {
+  local secret=$1
+  local ns=${2:-tailscale}
+  kubectl get secret $secret -n $ns -o json | jq -r '.data | to_entries[] | "\(.key): \(.value | @base64d)"'
+}
+
+# Push nix config with commit message
 push-nix() {
-  cd ~/.config/nixpkgs
+  cd ~/Git/nixos-config
   git add .
   git commit -a -m "$1"
   git push
   cd -
 }
 
+# Pull, merge and push nix config
 sync-nix() {
-  cd ~/.config/nixpkgs
+  cd ~/Git/nixos-config
   git add .
   git stash
-  git checkout main
-  git pull origin main
+  git checkout master
+  git pull origin master
   git stash pop
   home-manager switch
   push-nix "sync-nix performed on $(date)"
   cd -
 }
 
+# Patch k8s secret: kc-patch-secret NAME PATH VALUE
 kc-patch-secret() {
   local value
   value=$(echo "$3" | base64)
   kubectl patch secret "$1" --type='json' -p='[{"op" : "replace" ,"path" : '$2' ,"value" : '$value'}]'
 }
 
+# Decode k8s secret: kc-decode-secret NAME JSONPATH
 kc-decode-secret() {
   local value
   value=$(kubectl get secret "$1" -o jsonpath="{$2}")
   echo "$value" | base64 -d
 }
 
+# Add git remote: gitra OWNER REPO
 gitra() {
   url="git@github.com:$1/$2.git"
   git remote add $1 $url
 }
 
+# Full gcloud auth flow with docker registries
 gcloud-auth() {
   gcloud init
   gcloud auth login
@@ -53,6 +179,7 @@ gcloud-auth() {
   gcloud auth configure-docker us-central1-docker.pkg.dev,asia-northeast1-docker.pkg.dev,europe-west1-docker.pkg.dev
 }
 
+# Pull, tag, push and attest image with cosign
 new-cosign-image() {
   docker pull $1
   docker tag $1 $2/$1
@@ -60,7 +187,7 @@ new-cosign-image() {
   cosign attest --predicate $HOME/.tmp/cosign/predicate.json --type custom $2/$1 --key $CK
 }
 
-## Tailscale: deploy ts-recorder
+# Build and deploy ts-recorder to k8s
 ts-rec() {
   mkdir -p "$HOME/.config/dev"
   current="$(cat "$HOME/.config/dev/recorder-version" 2>/dev/null)"
@@ -96,6 +223,7 @@ ts-rec() {
   echo "- $rrepo:$next"
 }
 
+# Reset local docker registry on port 5001
 reset_registry() {
   # Stop and remove any existing registry container
   echo "Stopping and removing any existing registry container..."

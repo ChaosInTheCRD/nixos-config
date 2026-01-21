@@ -1,96 +1,139 @@
 #! /usr/bin/env zsh
-# Set personal aliases, overriding those provided by oh-my-zsh libs,
-# plugins, and themes. Aliases can be placed here, though oh-my-zsh
-# users are encouraged to define aliases within the ZSH_CUSTOM folder.
-# For a full list of active aliases, run `alias`.
+# Shell aliases - run 'halp' to fuzzy search with descriptions
 
-# enable color support of ls and also add handy aliases
-    alias ls='ls --color=auto'
-    alias dir='dir --color=auto'
-    alias vdir='vdir --color=auto'
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
+# ─────────────────────────────────────────────────────────────
+# Core
+# ─────────────────────────────────────────────────────────────
 
-# some more ls aliases
-    alias ll='ls -alF'
-    alias la='ls -A'
-    alias l='ls -CF'
-
-# temporary stuff
-alias argosecret="kubectl -n argo-cd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d | pbcopy"
-alias dockernuke='docker kill $(docker ps -q) && docker rm $(docker ps --all -q)'
-
-alias gnvim="goneovim &"
-alias vim="nvim"
-alias vi="nvim"
-alias watch="watch "
-alias kubectl="kubectl-lock kubectl --"
-alias k="kubectl"
-alias kc="kubectl"
-alias branch='git checkout $(git branch --all | fzf)'
-
-# Yubikey stuff
-alias rgpg="rm -r ~/.gnupg/private-keys-v1.d && killall gpg-agent && gpg-agent --daemon --pinentry-program /opt/homebrew/bin/pinentry"
-
-# bat
-alias cat="bat "
-
-# spicetify
-alias spicetify="spicetify-cli "
-
-# Brew up new casks when they're added!
-alias yabrew="brew bundle install --file ~/.config/brew/Brewfile"
-alias sketch="brew services start sketchybar"
-alias resketch="brew services restart sketchybar"
-alias stopsketch="brew services stop sketchybar"
-
-# Nix aliases
-alias dswitch="darwin-rebuild switch --flake /Users/tom.meadows/Git/nixos-config/.#macbook-m1"
-alias nswitch="/run/wrappers/bin/sudo NIXPKGS_ALLOW_INSECURE=1 NIXPKGS_ALLOW_UNFREE=1 NIXPKGS_ALLOW_UNSUPPORTED_SYSTEM=1 nixos-rebuild switch --flake ~/Git/nixos-config/.#desktop --impure"
-# easily update home-manager config
-alias unix="home-manager switch"
-alias nixedit="vim ~/Git/nixos-config/"
-alias znix="cd ~/.config/nixpkgs"
-alias snix="cd ~/.config/nixpkgs && git status && cd -"
-alias dnix="cd ~/.config/nixpkgs && git diff && cd -"
-
-# fuzzy search for file and open in vim
-alias vf="vim \$(fzf)"
-
-# Recursively delete `.DS_Store` files
-alias cleanup_dsstore="find . -name '*.DS_Store' -type f -ls -delete"
-
-# Disc utils
-alias diskspace_report="df -P -kHl"
-
-# Show/hide hidden files in Finder
-alias showdotfiles="defaults write com.apple.finder AppleShowAllFiles -bool true && killall Finder"
-alias hidedotfiles="defaults write com.apple.finder AppleShowAllFiles -bool false && killall Finder"
-
-# Show/hide all desktop icons (useful when presenting)
-alias showdesktop="defaults write com.apple.finder CreateDesktop -bool true && killall Finder"
-alias hidedesktop="defaults write com.apple.finder CreateDesktop -bool false && killall Finder"
-
-# zshrc config
-alias zshrc="${EDITOR} ~/.zshrc"
+# List with colors
+alias ls='ls --color=auto'
+# Long listing with details
+alias ll='ls -alF'
+# List including hidden files
+alias la='ls -A'
+# Clear terminal
+alias cls="clear"
+# Reload shell config
 alias reload="source ~/.zshrc && echo 'Shell config reloaded from ~/.zshrc'"
 
-# zsh.local config
-alias localrc="if [[ -a ~/.zsh.local ]]; then ${EDITOR} ~/.zsh.local; fi"
+# ─────────────────────────────────────────────────────────────
+# Editors
+# ─────────────────────────────────────────────────────────────
 
-# character based diff of two files
-alias diffchar="git diff --word-diff=color --word-diff-regex=. --no-index"
+# Use neovim as vim
+alias vim="nvim"
+# Use neovim as vi
+alias vi="nvim"
+# Open current dir in nvim
+alias v="nvim ."
 
-# use ripgrep instead of silversearcher
-alias ag=rg
+# ─────────────────────────────────────────────────────────────
+# Kubernetes
+# ─────────────────────────────────────────────────────────────
 
-# use fzf to find directories
-alias findir='cd $(find . -type d -print | fzf)'
+# Kubectl with lock wrapper
+alias kubectl="kubectl-lock kubectl --"
+# Short kubectl
+alias k="kubectl"
+# Kubectl in tailscale namespace
+alias kt="kubectl -n tailscale"
+# Get all in tailscale namespace
+alias kta="kubectl -n tailscale get all"
+# Get pods in tailscale namespace
+alias ktp="kubectl -n tailscale get pods"
+# Get services in tailscale namespace
+alias kts="kubectl -n tailscale get svc"
+# Get proxygroups in tailscale namespace
+alias ktpg="kubectl -n tailscale get proxygroup"
+# Get proxyclasses
+alias ktpc="kubectl get proxyclass"
+# Watch pods in tailscale namespace
+alias ktw="watch kubectl -n tailscale get pods"
+# Delete all pods in tailscale namespace
+alias ktnuke="kubectl delete pods --all -n tailscale"
+# kubectl apply -f
+alias kaf="kubectl apply -f"
+# kubectl delete -f
+alias kdf="kubectl delete -f"
+# kubectl delete context current
+alias kctxd="kubectx -d ."
 
-# xclip clipboard
-alias xcc='xclip -selection clipboard'
+# ─────────────────────────────────────────────────────────────
+# Stern (log tailing)
+# ─────────────────────────────────────────────────────────────
 
+# Stern in tailscale namespace
+alias sternt="stern -n tailscale"
+# Tail operator logs
+alias sternop="stern operator -n tailscale"
+
+# ─────────────────────────────────────────────────────────────
+# Git
+# ─────────────────────────────────────────────────────────────
+
+# Fuzzy checkout git branch
+alias branch='git checkout $(git branch --all | fzf)'
+# Git diff
+alias gd="git diff"
+# Git status
+alias gs="git status"
+# Git log
+alias gl="git log"
+# Git stash
+alias gst="git stash"
+# Git stash pop
+alias gstp="git stash pop"
+# Git rebase continue
+alias grc="git rebase --continue"
+# Git rebase abort
+alias gra="git rebase --abort"
+# Git fetch
+alias gf="git fetch"
+# Git reset hard
+alias grh="git reset --hard"
+# Git push current branch
+alias gp='git push origin $(git branch --show-current)'
+# Git push force current branch
+alias gpf='git push origin $(git branch --show-current) --force'
+# Git pull origin main
+alias gpm="git pull origin main"
+
+# ─────────────────────────────────────────────────────────────
+# Go
+# ─────────────────────────────────────────────────────────────
+
+# Go test all
+alias gt="go test ./..."
+# Go test verbose
+alias gtv="go test -v ./..."
+# Go test with race detector
+alias gtr="go test -race ./..."
+# Go mod tidy
+alias gmt="go mod tidy"
+# Go vet
+alias gv="go vet ./..."
+
+# ─────────────────────────────────────────────────────────────
+# Utilities
+# ─────────────────────────────────────────────────────────────
+
+# Watch with alias expansion
+alias watch="watch "
+# Use bat instead of cat
+alias cat="bat "
+# Tailscale CLI
 alias tailscale="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
 
+# ─────────────────────────────────────────────────────────────
+# Nix / Darwin
+# ─────────────────────────────────────────────────────────────
+
+# Rebuild nix config (darwin)
+alias switch="sudo make switch"
+
+# ─────────────────────────────────────────────────────────────
+# Work
+# ─────────────────────────────────────────────────────────────
+
+# Run Tailscale k8s deploy script
 alias ts-deploy="$HOME/Git/k8s-dev-script/deploy.sh"
