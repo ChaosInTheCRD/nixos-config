@@ -20,9 +20,9 @@ halp() {
       printf "%-18s │ %-40s │ %s\n", name, cmd, (desc != "" ? desc : "-")
       desc = ""
     }
-  ' $nixconfig/shell_aliases > $tmpfile
+  ' $nixconfig/shell_aliases >$tmpfile
 
-  echo "" >> $tmpfile
+  echo "" >>$tmpfile
 
   awk '
     /^#/ && !/^# ─/ { desc = substr($0, 3) }
@@ -32,7 +32,7 @@ halp() {
       printf "%-18s │ %-40s │ %s\n", name, "(function)", (desc != "" ? desc : "-")
       desc = ""
     }
-  ' $nixconfig/shell_functions >> $tmpfile
+  ' $nixconfig/shell_functions >>$tmpfile
 
   choice=$(cat $tmpfile | fzf --header="Enter=execute")
   rm -f $tmpfile
@@ -64,8 +64,8 @@ gri() {
   git rebase -i HEAD~$1
 }
 
-# Git commit with signing: gc "message"
-gc() {
+# Git commit with signing: cmt "message"
+cmt() {
   git commit -s -S -p -m "$1"
 }
 
