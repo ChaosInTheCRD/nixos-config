@@ -67,6 +67,7 @@
       "alacritty"
       "slack"
       "spotify"
+      "claude-code"
       "notion"
       "raycast"
       "transmission"
