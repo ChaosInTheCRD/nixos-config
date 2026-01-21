@@ -17,7 +17,7 @@ halp() {
       cmd = substr(line, eq + 1)
       gsub(/^["\047]|["\047]$/, "", cmd)
       if (length(cmd) > 40) cmd = substr(cmd, 1, 37) "..."
-      printf "%-18s │ %-40s │ %s\n", name, cmd, (desc != "" ? desc : "-")
+      printf "%-18s | %-40s | %s\n", name, cmd, (desc != "" ? desc : "-")
       desc = ""
     }
   ' $nixconfig/shell_aliases >$tmpfile
@@ -29,7 +29,7 @@ halp() {
     /^[a-zA-Z_][a-zA-Z0-9_-]*\(\)/ {
       name = $0
       sub(/\(\).*/, "", name)
-      printf "%-18s │ %-40s │ %s\n", name, "(function)", (desc != "" ? desc : "-")
+      printf "%-18s | %-40s | %s\n", name, "(function)", (desc != "" ? desc : "-")
       desc = ""
     }
   ' $nixconfig/shell_functions >>$tmpfile
@@ -38,7 +38,7 @@ halp() {
   rm -f $tmpfile
 
   if [[ -n $choice ]]; then
-    local name=$(echo $choice | cut -d'│' -f1 | xargs)
+    local name=$(echo $choice | cut -d'|' -f1 | xargs)
     print -z $name
   fi
 }
