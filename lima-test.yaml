@@ -1,0 +1,33 @@
+# Lima VM configuration for testing NixOS config
+# This creates a VM with enough resources to build the configuration
+
+vmType: "vz"
+rosetta:
+  enabled: true
+  binfmt: true
+
+images:
+  - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-arm64.qcow2"
+    arch: "aarch64"
+
+cpus: 4
+memory: "8GiB"
+disk: "40GiB"
+
+# Only mount the nixos-config directory, not the entire home
+mounts:
+  - location: "~/Git/nixos-config"
+    writable: false
+    9p:
+      securityModel: "none"
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      # Update system
+      apt-get update
+      # Install dependencies for Nix
+      apt-get install -y curl xz-utils git sudo
+      # Do NOT create build users - let the Nix installer handle this

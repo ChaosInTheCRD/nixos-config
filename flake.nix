@@ -31,6 +31,7 @@
     let                                                                     # Variables that can be used in the config files.
       mkDarwin = import ./lib/mkdarwin.nix;
       mkSys = import ./lib/mksys.nix;
+      mkServer = import ./lib/mkserver.nix;
       user = "chaosinthecrd";
       system = "x86_64-linux";
       pkgs  = import nixpkgs {
@@ -59,6 +60,21 @@
 
       nixosConfigurations.desktop = mkSys "desktop" rec {
          inherit home-manager user nixpkgs xremap-flake hyprland system pkgs;
+         lib = pkgs.lib;
+      };
+
+      nixosConfigurations.server = mkServer "server" rec {
+         inherit home-manager user nixpkgs system pkgs;
+         lib = pkgs.lib;
+      };
+
+      nixosConfigurations.server-arm64 = mkServer "server" rec {
+         inherit home-manager user nixpkgs;
+         system = "aarch64-linux";
+         pkgs = import nixpkgs {
+           system = "aarch64-linux";
+           config = { allowUnfree = true; allowInsecure = true; };
+         };
          lib = pkgs.lib;
       };
 
