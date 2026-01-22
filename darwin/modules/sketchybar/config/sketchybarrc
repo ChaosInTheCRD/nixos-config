@@ -50,7 +50,10 @@ sketchybar --default \
 # --- Left Items ---
 sketchybar --add item home left \
            --set home icon="" \
-            label.drawing=off \
+                      icon.color=0xff50FA7B \
+                      label.drawing=off \
+                      script="$ITEM_DIR/home.sh" \
+           --subscribe home mouse.clicked
 
 # Front App
 sketchybar --add item front_app left \
@@ -62,37 +65,49 @@ sketchybar --add item front_app left \
 # Days Until (tsdays)
 sketchybar --add item days_until left \
            --set days_until update_freq=3600 \
-                            icon=0 \
+                            icon=0 \
                             script="$ITEM_DIR/daysuntil.sh" \
                             icon.color=$LAVENDER \
                             label.padding_right=0
 
 # 2. Network Speed (Ensuring small text)
 sketchybar --add item network left 15 \
-           --set network update_freq=2 \
+           --set network update_freq=60 \
                          icon.color=$LAVENDER \
                          script="$ITEM_DIR/netspeed.sh" \
-                         label.padding_right=4
+                         label.padding_right=4 \
+                         popup.background.color=$ITEM_COLOR \
+                         popup.background.corner_radius=8 \
+                         popup.background.border_color=$ITEM_COLOR \
+                         popup.background.border_width=1 \
+                         click_script="$ITEM_DIR/netspeed.sh" \
+           --subscribe network mouse.entered mouse.exited
 
-sketchybar --add bracket left_bracket "${SPACES[@]}" home front_app days_until network \
+# Kubernetes Context
+sketchybar --add item kube left \
+           --set kube update_freq=30 \
+                      script="$ITEM_DIR/kube.sh" \
+                      icon=󱃾 \
+                      icon.color=$LAVENDER \
+                      popup.background.color=$ITEM_COLOR \
+                      popup.background.corner_radius=8 \
+                      popup.background.border_color=$ITEM_COLOR \
+                      popup.background.border_width=1 \
+           --subscribe kube mouse.entered mouse.exited
+
+sketchybar --add bracket left_bracket "${SPACES[@]}" home front_app days_until network kube \
            --set left_bracket background.color=$ITEM_COLOR \
                               background.corner_radius=8
 
 # --- Right Items ---
 
-# Clock and Calendar
+# Clock
 sketchybar --add item clock right \
            --set clock update_freq=10 \
                        script="$ITEM_DIR/clock.sh" \
                        icon=$CALENDAR \
                        icon.color=$LAVENDER \
-                       click_script="sketchybar --set calendar popup.drawing=toggle" \
-           --add item calendar popup.clock \
-           --set calendar script="$PLUGIN_DIR/calendar.sh" \
-                          background.color=$POPUP_BACKGROUND_COLOR \
-                          background.corner_radius=8 \
-                          padding_left=10 \
-                          padding_right=10
+                       padding_right=10
 
 # Rain Chart
 sketchybar --add graph rain_chart right 128 \
@@ -106,7 +121,12 @@ sketchybar --add graph rain_chart right 128 \
                             graph.color=$LAVENDER \
                             graph.fill_color=0x80E98074 \
                             graph.line_width=2 \
-                            label.drawing=off
+                            label.drawing=off \
+                            popup.background.color=$ITEM_COLOR \
+                            popup.background.corner_radius=8 \
+                            popup.background.border_color=$ITEM_COLOR \
+                            popup.background.border_width=1 \
+           --subscribe rain_chart mouse.entered mouse.exited
 
 
 # IP Address and Battery
@@ -115,8 +135,11 @@ sketchybar --add item ip_address right \
                             update_freq=10 \
                             icon=󰖩 \
                             icon.color=$PINK \
-                            click_script="open 'x-apple.systempreferences:com.apple.preference.network'" \
-           --subscribe ip_address wifi_change \
+                            popup.background.color=$ITEM_COLOR \
+                            popup.background.corner_radius=8 \
+                            popup.background.border_color=$ITEM_COLOR \
+                            popup.background.border_width=1 \
+           --subscribe ip_address wifi_change mouse.entered mouse.exited \
            --add item battery right \
            --set battery script="$ITEM_DIR/battery.sh" \
                          icon.color=$LAVENDER \
@@ -126,11 +149,29 @@ sketchybar --add item ip_address right \
 # Audio
 sketchybar --add item audio right \
            --set audio script="$ITEM_DIR/audio.sh" \
+                       update_freq=5 \
                        icon.color=$PINK \
-                       click_script="open 'x-apple.systempreferences:com.apple.preference.sound'"
+                       popup.background.color=$ITEM_COLOR \
+                       popup.background.corner_radius=8 \
+                       popup.background.border_color=$ITEM_COLOR \
+                       popup.background.border_width=1 \
+           --subscribe audio volume_change mouse.clicked mouse.entered mouse.exited
+
+# Tailscale Switcher
+sketchybar --add item tailscale right \
+           --set tailscale script="$ITEM_DIR/tailscale.sh" \
+                           update_freq=10 \
+                           icon=󰸳 \
+                           icon.color=0xffA4B3B6 \
+                           label.drawing=off \
+                           popup.background.color=$ITEM_COLOR \
+                           popup.background.corner_radius=8 \
+                           popup.background.border_color=$ITEM_COLOR \
+                           popup.background.border_width=1 \
+           --subscribe tailscale mouse.clicked mouse.entered mouse.exited
 
 # Bracket for right items
-sketchybar --add bracket right_bracket rain_chart clock ip_address battery audio \
+sketchybar --add bracket right_bracket rain_chart clock ip_address battery audio tailscale \
            --set right_bracket background.color=$ITEM_COLOR \
                                background.corner_radius=8
 

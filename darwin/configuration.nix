@@ -54,6 +54,7 @@
     casks = [
       "firefox"
       "akiflow"
+      "corelocationcli"
       "beeper"
       "launchcontrol"
       "orbstack"
@@ -93,6 +94,7 @@
   services = {
     yabai = {                             # Tiling window manager
       enable = true;
+      enableScriptingAddition = true;     # Loads SA on startup & sets up sudoers
       config = {                          # Other configuration options
         layout = "bsp";
         auto_balance = "on";

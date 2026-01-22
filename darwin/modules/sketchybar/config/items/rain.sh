@@ -1,5 +1,16 @@
 #!/bin/bash
 
+# Handle mouse events for hover popup
+if [ "$SENDER" = "mouse.entered" ]; then
+  sketchybar --set $NAME popup.drawing=on
+  exit 0
+fi
+
+if [ "$SENDER" = "mouse.exited" ]; then
+  sketchybar --set $NAME popup.drawing=off
+  exit 0
+fi
+
 # --- Configuration ---
 GRAPH_BAR_WIDTH=4
 # "Substantial" means rain >= 0.1mm. Anything less is considered "spitting".
@@ -13,20 +24,99 @@ source "$HOME/.config/sketchybar/colorpresets/custom-theme.sh"
 echo "----------------------------------------------------"
 echo "Rain Script Started: $(date)"
 
-# 1. Location Fetching
-IP_INFO=$(curl -s https://ipapi.co/json/)
-if [ -z "$IP_INFO" ] || echo "$IP_INFO" | jq -e '.error' >/dev/null; then
-  echo "Error fetching IP info."
-  exit 1
+# 1. Location Fetching (via CoreLocationCLI)
+LOCATION_CACHE="/tmp/sketchybar_location_cache"
+LAT=""
+LON=""
+
+echo "Fetching location from CoreLocationCLI..."
+if command -v CoreLocationCLI &>/dev/null; then
+  LOCATION_JSON=$(CoreLocationCLI --json 2>/dev/null)
+
+  if [ -n "$LOCATION_JSON" ]; then
+    LAT=$(echo "$LOCATION_JSON" | jq -r '.latitude // empty')
+    LON=$(echo "$LOCATION_JSON" | jq -r '.longitude // empty')
+    CITY=$(echo "$LOCATION_JSON" | jq -r '.locality // "Unknown"')
+    REGION=$(echo "$LOCATION_JSON" | jq -r '.administrativeArea // ""')
+
+    if [ -n "$LAT" ] && [ -n "$LON" ]; then
+      # Cache successful location
+      echo "${LAT},${LON},${CITY},${REGION}" > "$LOCATION_CACHE"
+      echo "Location from CoreLocationCLI: $CITY, $REGION (Lat: $LAT, Lon: $LON)"
+    fi
+  fi
+else
+  echo "CoreLocationCLI not found"
 fi
-LAT=$(echo "$IP_INFO" | jq -r '.latitude')
-LON=$(echo "$IP_INFO" | jq -r '.longitude')
-CITY=$(echo "$IP_INFO" | jq -r '.city')
-REGION=$(echo "$IP_INFO" | jq -r '.region')
 
-echo "Location Deduced: $CITY, $REGION (Lat: $LAT, Lon: $LON)"
+# Fall back to cache if no location yet
+if [ -z "$LAT" ] || [ -z "$LON" ]; then
+  if [ -f "$LOCATION_CACHE" ]; then
+    echo "Using cached location..."
+    IFS=',' read -r LAT LON CITY REGION < "$LOCATION_CACHE"
+    CITY="$CITY (cached)"
+  else
+    echo "No location available"
+    LAT=""
+    LON=""
+    CITY="Location unavailable"
+    REGION=""
+  fi
+fi
 
-# 2. Fetch Data
+echo "Location: $CITY, $REGION (Lat: $LAT, Lon: $LON)"
+
+# 2. Fetch Data (only if we have location)
+if [ -z "$LAT" ] || [ -z "$LON" ]; then
+  echo "Skipping weather fetch - no location"
+  # Set defaults for no-location state
+  PRECIP_ARRAY=()
+  TIME_ARRAY=()
+  MAX_RAIN=0
+  IS_RAINING_NOW=false
+  NEXT_RAIN_TIME=""
+  GRAPH_POINTS=""
+  for ((i = 0; i < 128; i++)); do GRAPH_POINTS="$GRAPH_POINTS 0.00"; done
+
+  # Show error state
+  sketchybar --set "$NAME" \
+    icon=󰖗 \
+    icon.color=0xff666666 \
+    graph.color=0xff666666 \
+    label.drawing=off
+
+  sketchybar --push "$NAME" $GRAPH_POINTS
+
+  # Update popup with error
+  THEME_SAGE="0xffA4B3B6"
+  THEME_LAVENDER="0xffE98074"
+  UPDATED_TIME=$(date "+%H:%M:%S")
+
+  sketchybar --set "$NAME" popup.align=center
+
+  sketchybar --set "$NAME".location label="Location: Unavailable" 2>/dev/null || \
+    sketchybar --add item "$NAME".location popup."$NAME" \
+      --set "$NAME".location label="Location: Unavailable" \
+        label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_LAVENDER"
+
+  sketchybar --set "$NAME".condition label="Conditions: Unknown" 2>/dev/null || \
+    sketchybar --add item "$NAME".condition popup."$NAME" \
+      --set "$NAME".condition label="Conditions: Unknown" \
+        label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_SAGE"
+
+  sketchybar --set "$NAME".maxrain label="Enable Location Services" 2>/dev/null || \
+    sketchybar --add item "$NAME".maxrain popup."$NAME" \
+      --set "$NAME".maxrain label="Enable Location Services" \
+        label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_SAGE"
+
+  sketchybar --set "$NAME".updated label="Updated: $UPDATED_TIME" 2>/dev/null || \
+    sketchybar --add item "$NAME".updated popup."$NAME" \
+      --set "$NAME".updated label="Updated: $UPDATED_TIME" \
+        label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_LAVENDER"
+
+  exit 0
+fi
+
 API_URL="https://api.open-meteo.com/v1/forecast?latitude=$LAT&longitude=$LON&minutely_15=precipitation&hourly=precipitation&forecast_days=2&timezone=auto"
 echo "Curl Request URL: $API_URL"
 
@@ -153,3 +243,52 @@ echo "$GRAPH_POINTS"
 echo "--------------------------------"
 
 sketchybar --push "$NAME" $GRAPH_POINTS
+
+# --- Update Popup ---
+# Theme colors
+THEME_SAGE="0xffA4B3B6"
+THEME_LAVENDER="0xffE98074"
+
+# Determine condition text
+if $IS_RAINING_NOW; then
+  CONDITION="Raining"
+elif [ -n "$NEXT_RAIN_TIME" ]; then
+  CONDITION="Rain at $NEXT_RAIN_TIME"
+else
+  CONDITION="Dry"
+fi
+
+# Format max rain
+if [ -n "$MAX_RAIN" ] && [ "$MAX_RAIN" != "0" ]; then
+  MAX_RAIN_FMT="${MAX_RAIN} mm"
+else
+  MAX_RAIN_FMT="0 mm"
+fi
+
+UPDATED_TIME=$(date "+%H:%M:%S")
+
+sketchybar --set "$NAME" popup.align=center
+
+# Line 1: Location
+sketchybar --set "$NAME".location label="Location: $CITY" 2>/dev/null || \
+  sketchybar --add item "$NAME".location popup."$NAME" \
+    --set "$NAME".location label="Location: $CITY" \
+      label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_SAGE"
+
+# Line 2: Condition
+sketchybar --set "$NAME".condition label="Conditions: $CONDITION" 2>/dev/null || \
+  sketchybar --add item "$NAME".condition popup."$NAME" \
+    --set "$NAME".condition label="Conditions: $CONDITION" \
+      label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_SAGE"
+
+# Line 3: Max precipitation
+sketchybar --set "$NAME".maxrain label="Max (8h): $MAX_RAIN_FMT" 2>/dev/null || \
+  sketchybar --add item "$NAME".maxrain popup."$NAME" \
+    --set "$NAME".maxrain label="Max (8h): $MAX_RAIN_FMT" \
+      label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_SAGE"
+
+# Line 4: Updated time
+sketchybar --set "$NAME".updated label="Updated: $UPDATED_TIME" 2>/dev/null || \
+  sketchybar --add item "$NAME".updated popup."$NAME" \
+    --set "$NAME".updated label="Updated: $UPDATED_TIME" \
+      label.font="Iosevka Nerd Font:Regular:13.0" label.color="$THEME_LAVENDER"
