@@ -78,6 +78,40 @@
          lib = pkgs.lib;
       };
 
+      # Standalone home-manager configurations for non-NixOS systems
+      # Automatically available for both x86_64-linux and aarch64-linux
+      homeConfigurations =
+        let
+          mkHomeConfig = systemArch:
+            let
+              systemPkgs = import nixpkgs {
+                system = systemArch;
+                config = { allowUnfree = true; allowInsecure = true; };
+              };
+            in
+            home-manager.lib.homeManagerConfiguration {
+              pkgs = systemPkgs;
+              modules = [
+                ./users/default/home-manager-server.nix
+                {
+                  home = {
+                    username = builtins.getEnv "USER";
+                    homeDirectory = builtins.getEnv "HOME";
+                    stateVersion = "23.05";
+                  };
+                }
+              ];
+            };
+        in
+        {
+          # Generate configs for all Linux architectures
+          "${user}@x86_64-linux" = mkHomeConfig "x86_64-linux";
+          "${user}@aarch64-linux" = mkHomeConfig "aarch64-linux";
+
+          # Default to current system
+          ${user} = mkHomeConfig builtins.currentSystem;
+        };
+
       darwinConfigurations.macbook-m1 = mkDarwin "macbook-m1" rec {
         inherit darwin home-manager user;
         system = "aarch64-darwin";

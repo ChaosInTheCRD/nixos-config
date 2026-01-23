@@ -12,6 +12,19 @@
   boot.kernelModules = [ ];
   boot.extraModulePackages = [ ];
 
+  # Generic filesystem configuration - adjust for your actual system
+  fileSystems."/" = {
+    device = "/dev/disk/by-label/nixos";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-label/boot";
+    fsType = "vfat";
+  };
+
+  swapDevices = [ ];
+
   # Use DHCP on all interfaces by default
   networking.useDHCP = lib.mkDefault true;
 

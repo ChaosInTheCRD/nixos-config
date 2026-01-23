@@ -1,8 +1,37 @@
 # Server Setup Guide
 
-This repository now supports building a headless/server configuration that includes only shell tools and CLI utilities, without any graphical applications.
+This repository supports building a headless/server configuration that includes only shell tools and CLI utilities, without any graphical applications.
 
-## Quick Start on a Linux Server
+## For Non-NixOS Systems (Debian, Ubuntu, etc.)
+
+If you're on a regular Linux distribution and just want the shell tools and configurations:
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/nixos-config.git
+   cd nixos-config
+   ```
+
+2. **Install Nix (if not already installed):**
+   ```bash
+   make install
+   ```
+
+   After installation, restart your shell or source the Nix profile:
+   ```bash
+   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+   ```
+
+3. **Apply the home-manager configuration:**
+   ```bash
+   make home-manager
+   ```
+
+   This installs all shell tools, dev tools, and configs to your home directory without touching the system.
+
+## For NixOS Systems
+
+If you're on NixOS:
 
 1. **Clone the repository:**
    ```bash

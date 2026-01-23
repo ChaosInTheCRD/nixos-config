@@ -4,7 +4,7 @@ name: { pkgs, lib, home-manager, user }:
     inherit pkgs;
     extraSpecialArgs = { inherit lib pkgs user; };
     modules = [
-      ../users/chaosinthecrd/home-manager.nix
+      ../users/default/home-manager.nix
       {
         home = {
           username = "${user}";

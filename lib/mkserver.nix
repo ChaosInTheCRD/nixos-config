@@ -8,12 +8,12 @@ nixpkgs.lib.nixosSystem {
     ../hardware/${name}.nix
     ../machines/${name}.nix
     ../machines/shared.nix
-    ../users/${user}/nixos-server.nix
+    ../users/default/nixos-server.nix
 
     home-manager.nixosModules.home-manager {
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
-      home-manager.users.${user} = import ../users/chaosinthecrd/home-manager-server.nix {
+      home-manager.users.${user} = import ../users/default/home-manager-server.nix {
         inherit lib pkgs user;
       };
     }

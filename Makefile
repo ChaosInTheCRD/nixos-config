@@ -1,5 +1,5 @@
 # Mark targets that aren't files
-.PHONY: install update switch bootstrap build-server help
+.PHONY: install update switch bootstrap build-server home-manager help
 
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -51,6 +51,10 @@ build-server:
 	@echo "Building server configuration (shell tools only, no GUI)..."
 	NIX_CONFIG="$(NIX_CONFIG)" nix build ".#nixosConfigurations.server.config.system.build.toplevel" --impure
 
+home-manager:
+	@echo "Activating home-manager configuration (auto-detecting architecture)..."
+	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch --flake ".#$(USER)" --impure
+
 bootstrap: install update switch
 
 help:
@@ -59,8 +63,13 @@ help:
 	@echo "  update        - Run 'nix flake update'"
 	@echo "  switch        - Apply the system configuration (Darwin or NixOS)"
 	@echo "  build-server  - Build server configuration (shell only, no GUI)"
+	@echo "  home-manager  - Apply home-manager config (auto-detects architecture)"
 	@echo "  bootstrap     - Run install, update, and switch in sequence"
 	@echo "  help          - Show this help message"
 	@echo ""
-	@echo "On Linux servers, 'make switch' will default to the server configuration."
-	@echo "You can override with: make switch NIXNAME=desktop"
+	@echo "For any Linux server/VM (Debian, Ubuntu, Lima, etc.):"
+	@echo "  1. Clone this repo"
+	@echo "  2. Run: make install"
+	@echo "  3. Run: make home-manager"
+	@echo ""
+	@echo "Architecture detection is automatic (x86_64 or aarch64)."

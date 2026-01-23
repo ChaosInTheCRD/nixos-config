@@ -25,7 +25,7 @@ darwin.lib.darwinSystem {
     home-manager.darwinModules.home-manager {
       home-manager.useUserPackages = true;
       home-manager.useGlobalPkgs = true;
-      home-manager.users.${user} = import ../users/${user}/home-manager.nix {
+      home-manager.users.${user} = import ../users/default/home-manager.nix {
           inherit lib pkgs;
       };
     }

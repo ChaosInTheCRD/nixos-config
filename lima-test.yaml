@@ -6,6 +6,9 @@ rosetta:
   enabled: true
   binfmt: true
 
+env:
+  TERM: xterm-256color
+
 images:
   - location: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-arm64.qcow2"
     arch: "aarch64"
