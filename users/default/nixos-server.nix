@@ -41,18 +41,25 @@
   # Enable SSH
   services.openssh = {
     enable = true;
-    # Ensure NixOS paths are available in non-interactive SSH sessions
-    extraConfig = ''
-      SetEnv PATH=/run/current-system/sw/bin:/usr/bin:/bin
-    '';
+    settings = {
+      PermitRootLogin = "no";
+    };
   };
+
+  # Ensure system profile is in PATH for SSH sessions
+  environment.shellInit = ''
+    export PATH=/run/current-system/sw/bin:$PATH
+  '';
 
   programs.ssh = {
     startAgent = true;
   };
 
   # Enable mosh (mobile shell)
-  programs.mosh.enable = true;
+  programs.mosh = {
+    enable = true;
+    withUtempter = true;
+  };
 
   # Open firewall for mosh (UDP ports 60000-61000)
   networking.firewall.allowedUDPPortRanges = [
@@ -65,7 +72,6 @@
     git
     wget
     curl
-    mosh
   ];
 
   # Enable Docker (useful for servers)
