@@ -41,6 +41,10 @@
   # Enable SSH
   services.openssh = {
     enable = true;
+    # Ensure NixOS paths are available in non-interactive SSH sessions
+    extraConfig = ''
+      SetEnv PATH=/run/current-system/sw/bin:/usr/bin:/bin
+    '';
   };
 
   programs.ssh = {
@@ -61,6 +65,7 @@
     git
     wget
     curl
+    mosh
   ];
 
   # Enable Docker (useful for servers)
