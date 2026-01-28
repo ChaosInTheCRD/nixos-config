@@ -1,5 +1,5 @@
 # reload yabai
-shift + alt - r : brew services restart yabai && brew services restart skhd && brew services restart sketchybar
+shift + alt - r : sudo launchctl kickstart -k system/org.nixos.yabai-sa && sudo launchctl kickstart -k system/org.nixos.skhd && sudo launchctl kickstart -k system/org.nixos.sketchybar
 
 # open kitty
 shift + alt - t : ghostty

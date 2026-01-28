@@ -137,3 +137,7 @@ alias switch="sudo NIXPKGS_ALLOW_UNFREE=1 make -C /Users/chaosinthecrd/Git/nixos
 
 # Run Tailscale k8s deploy script
 alias ts-deploy="$HOME/Git/k8s-dev-script/deploy.sh"
+
+
+# switch to tailscale repository directory
+alias ta="cd $HOME/Git/tailscale"

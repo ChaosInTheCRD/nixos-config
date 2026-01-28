@@ -3,8 +3,8 @@
 # Color Palette -- Custom "Synthwave" Theme
 
 # Base colors
-export NAVY=0xff2A1B3D
-export DEEP_PURPLE=0xff44318D
+export NAVY=0xff261837
+export DEEP_PURPLE=0xff3D2C7F
 export SAGE=0xffA4B3B6
 
 # Accent colors

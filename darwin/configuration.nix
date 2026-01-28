@@ -135,7 +135,8 @@
     skhd = {
       enable = true;
       skhdConfig = ''
-        shift + alt - r : brew services restart yabai && brew services restart skhd && brew services restart sketchybar
+        shift + alt - r : sudo launchctl kickstart -k system/org.nixos.yabai-sa && launchctl kickstart -k gui/$(id -u)/org.nixos.skhd && brew services restart sketchybar
+        shift + alt - y : launchctl kickstart -k gui/$(id -u)/org.nixos.yabai && sudo launchctl kickstart -k system/org.nixos.yabai-sa
 
         shift + alt - t : ghostty
 
@@ -272,7 +273,11 @@
         AutomaticallyInstallMacOSUpdates = true;
       };
     };
-    activationScripts.postActivation.text = ''sudo chsh -s ${pkgs.zsh}/bin/zsh''; # Since it's not possible to declare default shell, run this command after build
+    activationScripts.postActivation.text = ''
+      sudo chsh -s ${pkgs.zsh}/bin/zsh
+      # Reload yabai scripting addition after rebuild
+      sudo /run/current-system/sw/bin/yabai --load-sa 2>/dev/null || true
+    ''; # Since it's not possible to declare default shell, run this command after build
     stateVersion = 5;
   };
 }

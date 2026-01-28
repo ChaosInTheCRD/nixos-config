@@ -10,8 +10,10 @@ in {
         ../../modules/shell/git.nix
         ../../modules/shell/zsh.nix
         ../../modules/editors/nvim/nvim.nix
+        ../../modules/archive-downloads/archive-downloads.nix
         ../../pkgs/default.nix
         ../../darwin/modules/kitty/kitty.nix
+        ../../darwin/modules/ghostty/ghostty.nix
         ] ++ (lib.optionals pkgs.stdenv.isDarwin [
         ../../darwin/modules/sketchybar/sketchybar.nix
         ../../darwin/modules/yabai/yabai.nix

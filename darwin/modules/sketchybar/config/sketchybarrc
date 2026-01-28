@@ -33,9 +33,9 @@ sketchybar --bar \
 
 # --- Default Settings ---
 sketchybar --default \
-           icon.font="Iosevka Nerd Font:Regular:16.0" \
+           icon.font="Iosevka Nerd Font:Bold:16.0" \
            icon.color=$ICON_COLOR \
-           label.font="Iosevka Nerd Font:Regular:16.0" \
+           label.font="Iosevka Nerd Font:Bold:16.0" \
            label.color=$LABEL_COLOR \
            background.height=28 \
            background.corner_radius=8 \
@@ -95,7 +95,20 @@ sketchybar --add item kube left \
                       popup.background.border_width=1 \
            --subscribe kube mouse.entered mouse.exited
 
-sketchybar --add bracket left_bracket "${SPACES[@]}" home front_app days_until network kube \
+# Tailscale Switcher
+sketchybar --add item tailscale left \
+           --set tailscale script="$ITEM_DIR/tailscale.sh" \
+                           update_freq=10 \
+                           icon=󰸳 \
+                           icon.color=0xffA4B3B6 \
+                           label.drawing=off \
+                           popup.background.color=$ITEM_COLOR \
+                           popup.background.corner_radius=8 \
+                           popup.background.border_color=$ITEM_COLOR \
+                           popup.background.border_width=1 \
+           --subscribe tailscale mouse.clicked mouse.entered mouse.exited
+
+sketchybar --add bracket left_bracket "${SPACES[@]}" home front_app days_until network kube tailscale \
            --set left_bracket background.color=$ITEM_COLOR \
                               background.corner_radius=8
 
@@ -157,21 +170,8 @@ sketchybar --add item audio right \
                        popup.background.border_width=1 \
            --subscribe audio volume_change mouse.clicked mouse.entered mouse.exited
 
-# Tailscale Switcher
-sketchybar --add item tailscale right \
-           --set tailscale script="$ITEM_DIR/tailscale.sh" \
-                           update_freq=10 \
-                           icon=󰸳 \
-                           icon.color=0xffA4B3B6 \
-                           label.drawing=off \
-                           popup.background.color=$ITEM_COLOR \
-                           popup.background.corner_radius=8 \
-                           popup.background.border_color=$ITEM_COLOR \
-                           popup.background.border_width=1 \
-           --subscribe tailscale mouse.clicked mouse.entered mouse.exited
-
 # Bracket for right items
-sketchybar --add bracket right_bracket rain_chart clock ip_address battery audio tailscale \
+sketchybar --add bracket right_bracket rain_chart clock ip_address battery audio \
            --set right_bracket background.color=$ITEM_COLOR \
                                background.corner_radius=8
 

@@ -1,0 +1,77 @@
+# Ghostty Configuration
+# Custom Synthwave Theme to match sketchybar
+
+# Font configuration
+font-family = "JetBrainsMono Nerd Font"
+font-size = 13
+font-thicken = true
+
+# Window configuration
+window-padding-x = 10
+window-padding-y = 10
+window-decoration = true
+macos-titlebar-style = transparent
+
+# Theme: Custom Synthwave
+# Matches the sketchybar color scheme exactly
+
+# Background and foreground (matching sketchybar NAVY and SAGE)
+background = #261837
+foreground = #A4B3B6
+
+# Cursor (using PINK accent)
+cursor-color = #D83F87
+cursor-text = #261837
+
+# Selection (using DEEP_PURPLE for visibility)
+selection-background = #3D2C7F
+selection-foreground = #C5D0D3
+
+# Black (NAVY and DEEP_PURPLE variants)
+palette = 0=#261837
+palette = 8=#3D2C7F
+
+# Red (LAVENDER)
+palette = 1=#E98074
+palette = 9=#E98074
+
+# Green (bright green for git status visibility)
+palette = 2=#50FA7B
+palette = 10=#69FF94
+
+# Yellow (LAVENDER - lighter variant)
+palette = 3=#F0A89E
+palette = 11=#F0A89E
+
+# Blue (muted cyan for visibility)
+palette = 4=#7BB8C8
+palette = 12=#7BB8C8
+
+# Magenta (PINK)
+palette = 5=#D83F87
+palette = 13=#FF5FA8
+
+# Cyan (blend of SAGE and LAVENDER)
+palette = 6=#C4B8B8
+palette = 14=#D4C8C8
+
+# White (SAGE variants)
+palette = 7=#A4B3B6
+palette = 15=#C5D0D3
+
+# Additional custom colors
+# Sky (muted cyan for visibility)
+palette = 16=#7BB8C8
+# Pink accent
+palette = 17=#D83F87
+# Lavender accent
+palette = 18=#E98074
+
+# Performance
+shell-integration = detect
+shell-integration-features = no-cursor
+
+# Behavior
+copy-on-select = clipboard
+confirm-close-surface = false
+quit-after-last-window-closed = false
