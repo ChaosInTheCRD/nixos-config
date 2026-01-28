@@ -6,6 +6,7 @@
   imports = [
     ../../modules/shell/git-server.nix
     ../../modules/shell/zsh-server.nix
+    ../../modules/shell/ssh.nix
     ../../modules/shell/direnv-hm.nix
     ../../modules/editors/nvim/nvim-server.nix
     ../../pkgs/core.nix
