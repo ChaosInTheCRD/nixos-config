@@ -9,7 +9,6 @@
     ../../modules/shell/ssh.nix
     ../../modules/shell/direnv-hm.nix
     ../../modules/editors/nvim/nvim-server.nix
-    ../../modules/services/syncthing/syncthing-server.nix
     ../../pkgs/core.nix
     ../../pkgs/dev.nix
     ../../pkgs/kube.nix

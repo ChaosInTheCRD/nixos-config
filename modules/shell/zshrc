@@ -47,6 +47,18 @@ export PATH
 bindkey "^[[1;3C" forward-word
 bindkey "^[[1;3D" backward-word
 
+# Fix mouse scroll in SSH sessions
+# Disable the default bindings that make scroll wheel navigate history
+# This allows proper terminal scrollback instead
+if [[ -n "$SSH_CONNECTION" ]] || [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]]; then
+  # In SSH sessions, ensure scroll works properly
+  # Unbind keys that might be triggered by mouse scroll
+  bindkey -r '^[[A' 2>/dev/null  # Unbind up
+  bindkey -r '^[[B' 2>/dev/null  # Unbind down
+  bindkey '^[[A' up-line-or-history    # Re-bind up arrow properly
+  bindkey '^[[B' down-line-or-history  # Re-bind down arrow properly
+fi
+
 # Nix
 if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
   . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
