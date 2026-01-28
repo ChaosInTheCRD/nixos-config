@@ -1,6 +1,6 @@
 # Shell-only home-manager configuration for servers
 # No GUI applications, only shell tools and CLI utilities
-{ lib, pkgs, config, ... }:
+{ lib, pkgs, ... }:
 
 {
   imports = [
