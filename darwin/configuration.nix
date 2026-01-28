@@ -50,6 +50,7 @@
       "switchaudio-osx"
       "oras"
       "coreutils"
+      "mosh"
     ];
     casks = [
       "firefox"

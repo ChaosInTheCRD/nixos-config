@@ -43,5 +43,8 @@
 
   home = {
     stateVersion = "23.05";
+    sessionVariables = {
+      TERM = "xterm-256color";
+    };
   };
 }

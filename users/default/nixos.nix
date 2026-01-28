@@ -79,6 +79,14 @@ in
     askPassword = "/etc/profiles/per-user/chaosinthecrd/bin/ksshaskpass";
   };
 
+  # Enable mosh (mobile shell)
+  programs.mosh.enable = true;
+
+  # Open firewall for mosh (UDP ports 60000-61000)
+  networking.firewall.allowedUDPPortRanges = [
+    { from = 60000; to = 61000; }
+  ];
+
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
