@@ -56,14 +56,7 @@ home-manager:
 	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch --flake ".#$(USER)" --impure
 
 setup-home-manager:
-	@echo "Setting up home-manager with backup of existing shell configs..."
-	@TIMESTAMP=$$(date +%Y%m%d-%H%M%S); \
-	for file in .bashrc .bash_profile .profile .bash_logout; do \
-		if [ -f "$$HOME/$$file" ]; then \
-			echo "Backing up $$file to $$file.backup.$$TIMESTAMP"; \
-			cp "$$HOME/$$file" "$$HOME/$$file.backup.$$TIMESTAMP"; \
-		fi; \
-	done
+	@echo "Setting up home-manager with automatic backup of existing shell configs..."
 	@echo "Ensuring Nix is in PATH..."
 	@export PATH="/nix/var/nix/profiles/default/bin:$$PATH"; \
 	echo "Detecting architecture..."; \
@@ -78,9 +71,11 @@ setup-home-manager:
 	fi; \
 	echo "Detected system: $$SYSTEM"; \
 	echo "Applying home-manager configuration..."; \
-	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch --flake ".#$(USER)@$$SYSTEM" --impure
+	echo "Note: Existing files will be backed up with .backup extension"; \
+	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch -b backup --flake ".#$(USER)@$$SYSTEM" --impure
 	@echo ""
 	@echo "Setup complete! Please log out and log back in for changes to take effect."
+	@echo "Your old config files have been backed up with .backup extension."
 
 bootstrap: install update switch
 
