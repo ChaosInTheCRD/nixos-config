@@ -1,5 +1,5 @@
 # Mark targets that aren't files
-.PHONY: install update switch bootstrap build-server home-manager help
+.PHONY: install update switch bootstrap build-server home-manager setup-home-manager help
 
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -55,21 +55,50 @@ home-manager:
 	@echo "Activating home-manager configuration (auto-detecting architecture)..."
 	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch --flake ".#$(USER)" --impure
 
+setup-home-manager:
+	@echo "Setting up home-manager with backup of existing shell configs..."
+	@TIMESTAMP=$$(date +%Y%m%d-%H%M%S); \
+	for file in .bashrc .bash_profile .profile .bash_logout; do \
+		if [ -f "$$HOME/$$file" ]; then \
+			echo "Backing up $$file to $$file.backup.$$TIMESTAMP"; \
+			cp "$$HOME/$$file" "$$HOME/$$file.backup.$$TIMESTAMP"; \
+		fi; \
+	done
+	@echo "Ensuring Nix is in PATH..."
+	@export PATH="/nix/var/nix/profiles/default/bin:$$PATH"; \
+	echo "Detecting architecture..."; \
+	ARCH=$$(uname -m); \
+	if [ "$$ARCH" = "x86_64" ]; then \
+		SYSTEM="x86_64-linux"; \
+	elif [ "$$ARCH" = "aarch64" ] || [ "$$ARCH" = "arm64" ]; then \
+		SYSTEM="aarch64-linux"; \
+	else \
+		echo "Unsupported architecture: $$ARCH"; \
+		exit 1; \
+	fi; \
+	echo "Detected system: $$SYSTEM"; \
+	echo "Applying home-manager configuration..."; \
+	NIX_CONFIG="$(NIX_CONFIG)" nix run home-manager/master -- switch --flake ".#$(USER)@$$SYSTEM" --impure
+	@echo ""
+	@echo "Setup complete! Please log out and log back in for changes to take effect."
+
 bootstrap: install update switch
 
 help:
 	@echo "Available targets:"
-	@echo "  install       - Install Nix package manager"
-	@echo "  update        - Run 'nix flake update'"
-	@echo "  switch        - Apply the system configuration (Darwin or NixOS)"
-	@echo "  build-server  - Build server configuration (shell only, no GUI)"
-	@echo "  home-manager  - Apply home-manager config (auto-detects architecture)"
-	@echo "  bootstrap     - Run install, update, and switch in sequence"
-	@echo "  help          - Show this help message"
+	@echo "  install              - Install Nix package manager"
+	@echo "  update               - Run 'nix flake update'"
+	@echo "  switch               - Apply the system configuration (Darwin or NixOS)"
+	@echo "  build-server         - Build server configuration (shell only, no GUI)"
+	@echo "  home-manager         - Apply home-manager config (auto-detects architecture)"
+	@echo "  setup-home-manager   - Backup existing shell configs and apply home-manager"
+	@echo "  bootstrap            - Run install, update, and switch in sequence"
+	@echo "  help                 - Show this help message"
 	@echo ""
 	@echo "For any Linux server/VM (Debian, Ubuntu, Lima, etc.):"
-	@echo "  1. Clone this repo"
+	@echo "  1. Clone this repo to ~/.config/nixos-config"
 	@echo "  2. Run: make install"
-	@echo "  3. Run: make home-manager"
+	@echo "  3. Run: make setup-home-manager (backs up existing configs)"
+	@echo "  4. Log out and log back in"
 	@echo ""
 	@echo "Architecture detection is automatic (x86_64 or aarch64)."
