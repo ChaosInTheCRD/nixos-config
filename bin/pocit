@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Spin up a POC-building agent on the LLM VM from a spec file.
+#
+# usage: pocit --file <spec.(md|txt|docx|rtf)> [--project <new-name> | --repo <existing>]
+#              [--provider <p>]
+#   --project  create a fresh git repo at ~/Git/<new-name> on the VM and build there
+#   --repo     build in an isolated worktree of an existing ~/Git/<repo>
+#   (neither)  defaults to --project <spec filename slug>
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}"
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --file) FILE="$2"; shift ;;
+        --file=*) FILE="${1#--file=}" ;;
+        --project) PROJECT="$2"; shift ;;
+        --project=*) PROJECT="${1#--project=}" ;;
+        --repo) REPO="$2"; shift ;;
+        --repo=*) REPO="${1#--repo=}" ;;
+        --provider) PROVIDER="$2"; shift ;;
+        -h|--help) sed -n '2,9p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) echo "unknown flag: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+[ -n "$FILE" ] || { echo "usage: pocit --file <spec> [--project <name> | --repo <existing>]" >&2; exit 1; }
+[ -f "$FILE" ] || { echo "error: no such file: $FILE" >&2; exit 1; }
+[ -n "$PROJECT" ] && [ -n "$REPO" ] && { echo "error: --project and --repo are mutually exclusive" >&2; exit 1; }
+
+# Spec to plain text (textutil is a macOS builtin; handles docx/doc/rtf)
+case "$FILE" in
+    *.docx|*.doc|*.rtf) SPEC=$(textutil -convert txt -stdout "$FILE") ;;
+    *) SPEC=$(cat "$FILE") ;;
+esac
+
+slugify() { echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'; }
+if [ -z "$PROJECT" ] && [ -z "$REPO" ]; then
+    PROJECT=$(slugify "$(basename "${FILE%.*}")")
+    echo "==> No --project/--repo given; creating new project '$PROJECT'"
+fi
+
+VMHOME=$(llm_ssh 'echo "$HOME"')
+SLUG=$(slugify "${PROJECT:-$(basename "${FILE%.*}")}")
+CONTEXT_FILE=".paseo-context-poc-$SLUG.md"
+printf '%s\n' "$SPEC" | llm_ssh "cat > \"$CONTEXT_FILE\""
+
+AGENT_ARGS=(run --background --provider "$PROVIDER" --title "poc: $SLUG")
+
+if [ -n "$PROJECT" ]; then
+    # Fresh repo on the VM; agent works directly in it (nothing to isolate from)
+    llm_ssh "mkdir -p ~/Git/$PROJECT && cd ~/Git/$PROJECT && { [ -d .git ] || { git init -q -b main && git commit -q --allow-empty -m 'init'; }; }"
+    WHERE="new repo ~/Git/$PROJECT"
+    AGENT_ARGS+=(--cwd "$VMHOME/Git/$PROJECT")
+else
+    VM_REPO="Git/$(basename "$REPO")"
+    WHERE="worktree of ~/$VM_REPO (branch chaosinthecrd/poc-$SLUG)"
+    AGENT_ARGS+=(--cwd "$VMHOME/$VM_REPO"
+        --new-workspace worktree --worktree-mode branch-off
+        --new-branch "chaosinthecrd/poc-$SLUG" --worktree-slug "poc-$SLUG")
+fi
+
+PROMPT="Build a proof of concept. The full spec is in ~/$CONTEXT_FILE — read it first.
+
+Ground rules:
+- Work autonomously start to finish. Do NOT end your turn with questions for
+  me — when something is ambiguous, pick the most reasonable interpretation,
+  record it under 'Assumptions' in NOTES.md, and keep going.
+- Scaffold the project properly (build tooling, deps, .gitignore).
+- Make it RUN: execute it, fix it, iterate until it demonstrably works.
+- README.md: what it is and exactly how to run it.
+- NOTES.md: design decisions, assumptions, current status, next steps.
+- Commit as you go with clear messages. Do NOT push anywhere."
+
+echo "==> Dispatching POC agent in $WHERE"
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo $(printf '%q ' "${AGENT_ARGS[@]}") $(printf '%q' "$PROMPT")"
+echo "==> Dispatched. Track with: paseo ls / attach via the app"

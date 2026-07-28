@@ -37,6 +37,12 @@ export SSH_ASKPASS_REQUIRE="force"
 export CK=$HOME/.cosign/cosign.key
 export CP=$HOME/.cosign/cosign.pub
 
+# aif (corp) — LLM sandbox VM runs as this user, not the default "ubuntu"
+export AIF_SSH_USER=chaosinthecrd
+
+# LLM VM workflow CLIs (board/take/chop/taken) + paseo desktop-bundled CLI
+export PATH="$HOME/Git/nixos-config/bin:/Applications/Paseo.app/Contents/Resources/bin:$PATH"
+
 # Don’t clear the screen after quitting a manual page
 export MANPAGER="less -X"
 

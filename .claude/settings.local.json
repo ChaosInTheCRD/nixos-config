@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(switch)"
+      "Bash(switch)",
+      "Read(//Users/chaosinthecrd/Git/corp/**)",
+      "Read(//Users/chaosinthecrd/Git/corp/maintner/**)",
+      "Bash(curl -s http://rogitproxy/ --max-time 5)",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(command -v paseo)",
+      "Bash(npm ls *)",
+      "Bash(nix search *)",
+      "Bash(npm view *)",
+      "Bash(python3 -c \"import json;d=json.load\\(open\\('flake.lock'\\)\\);[print\\(k, d['nodes'][k]['locked'].get\\('lastModified'\\), d['nodes'][k]['locked'].get\\('rev',''\\)[:12]\\) for k in d['nodes'] if 'locked' in d['nodes'][k]]\")"
     ]
   }
 }

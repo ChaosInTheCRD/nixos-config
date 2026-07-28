@@ -240,3 +240,18 @@ reset_registry() {
 
   echo "Registry is deployed at https://localhost:5001"
 }
+
+# Forward local ports into the LLM sandbox VM (VM-side loopback only, so
+# only agents on the VM can use them). Holds the terminal; Ctrl-C tears down.
+# Usage: vmshare 8001 [8002 ...]
+vmshare() {
+  if [ $# -eq 0 ]; then
+    echo "usage: vmshare <port> [port ...]" >&2
+    return 1
+  fi
+  local args=()
+  for p in "$@"; do args+=(-R "$p:localhost:$p"); done
+  echo "forwarding to VM localhost: $*  (Ctrl-C to stop)"
+  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    "${args[@]}" chaosinthecrd@chaosinthecrd-my-precious.corp.ts.net
+}

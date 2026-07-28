@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Fan out agents over board issues so investigation is already done when you
+# get to them. Selects Not Started + unassigned issues (see `board`), shows
+# the list, confirms, then dispatches each via `take --no-notes` with a
+# standing investigation prompt.
+#
+# usage: chop [--label Refined] [--grep <pat>] [--limit N] [--provider <p>]
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+BIN_DIR="$(dirname "$0")"
+
+LABEL="" GREP="" LIMIT=5 PROVIDER=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --label) LABEL="$2"; shift ;;
+        --grep) GREP="$2"; shift ;;
+        --limit) LIMIT="$2"; shift ;;
+        --provider) PROVIDER="$2"; shift ;;
+        -h|--help) sed -n '2,7p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) echo "unknown flag: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+
+BOARD_ARGS=(--limit "$LIMIT" --json)
+[ -n "$LABEL" ] && BOARD_ARGS+=(--label "$LABEL")
+[ -n "$GREP" ] && BOARD_ARGS+=(--grep "$GREP")
+
+SELECTED=$("$BIN_DIR/board" "${BOARD_ARGS[@]}")
+COUNT=$(echo "$SELECTED" | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')
+if [ "$COUNT" -eq 0 ]; then
+    echo "no matching issues"; exit 0
+fi
+
+# Skip issues that already have a dispatched agent (matched by title prefix,
+# "owner/repo#N: ..." as set by take)
+EXISTING=$(llm_ssh 'export PATH="$HOME/.nix-profile/bin:$PATH"; paseo ls --json' \
+    | python3 -c '
+import json, re, sys
+for a in json.load(sys.stdin):
+    m = re.match(r"^((?:[\w.-]+/)?[\w.-]+#\d+): ", a.get("name") or "")
+    if m:
+        issue = m.group(1)
+        print(issue if "/" in issue else "tailscale/" + issue)' || true)
+
+echo "Will dispatch agents for:"
+IDS=()
+while IFS= read -r id; do
+    if echo "$EXISTING" | grep -qxF "$id"; then
+        echo "  $id  (skipped: agent already exists)"
+    else
+        echo "  $id"
+        IDS+=("$id")
+    fi
+done < <(echo "$SELECTED" | python3 -c 'import json,sys; [print(i["id"]) for i in json.load(sys.stdin)]')
+
+[ ${#IDS[@]} -gt 0 ] || { echo "nothing to do"; exit 0; }
+printf 'Dispatch %d agents? [y/N] ' "${#IDS[@]}"
+read -r ANSWER
+[ "$ANSWER" = "y" ] || { echo "aborted"; exit 1; }
+
+FAILED=0
+for id in "${IDS[@]}"; do
+    echo
+    TAKE_ARGS=(--no-notes)
+    [ -n "$PROVIDER" ] && TAKE_ARGS+=(--provider "$PROVIDER")
+    NOTES="This is an unattended batch investigation. Do NOT implement unless the fix
+is small and obvious — prioritize a high-quality investigation writeup in
+NOTES.md that makes it fast for me to pick this up later." \
+        "$BIN_DIR/take" "$id" "${TAKE_ARGS[@]}" || { echo "WARN: take $id failed" >&2; FAILED=$((FAILED+1)); }
+done
+echo
+echo "==> chop complete (${#IDS[@]} dispatched, $FAILED failed). Track with: taken"

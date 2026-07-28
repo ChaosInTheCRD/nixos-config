@@ -1,5 +1,8 @@
 # Mark targets that aren't files
-.PHONY: install update switch bootstrap build-server home-manager setup-home-manager help
+.PHONY: install update switch bootstrap build-server home-manager setup-home-manager bootstrap-llm help
+
+# LLM sandbox VM (corp workstation) for `make bootstrap-llm`
+VM ?= chaosinthecrd-my-precious.corp.ts.net
 
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -79,6 +82,13 @@ setup-home-manager:
 
 bootstrap: install update switch
 
+bootstrap-llm:
+	@echo "Bootstrapping LLM sandbox VM: $(VM)"
+	ssh $(USER)@$(VM) 'bash -s' < $(MAKEFILE_DIR)/scripts/bootstrap-llm-vm.sh
+
+update-llm:
+	VM=$(VM) $(MAKEFILE_DIR)/scripts/update-llm-vm.sh
+
 help:
 	@echo "Available targets:"
 	@echo "  install              - Install Nix package manager"
@@ -88,6 +98,8 @@ help:
 	@echo "  home-manager         - Apply home-manager config (auto-detects architecture)"
 	@echo "  setup-home-manager   - Backup existing shell configs and apply home-manager"
 	@echo "  bootstrap            - Run install, update, and switch in sequence"
+	@echo "  bootstrap-llm        - Bootstrap an LLM sandbox VM over ssh (VM=<name>, see LLM-VM.md)"
+	@echo "  update-llm           - Bump flake.lock here, then update + switch the LLM VM"
 	@echo "  help                 - Show this help message"
 	@echo ""
 	@echo "For any Linux server/VM (Debian, Ubuntu, Lima, etc.):"

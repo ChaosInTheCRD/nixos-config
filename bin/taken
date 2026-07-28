@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# List issue agents on the LLM VM (dispatched by take/chop). Matches agents
+# whose title starts with an issue ref ("owner/repo#N: ..." per take).
+# usage: taken [--all]   (--all includes archived)
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+LS_ARGS=(ls --json)
+[ "${1:-}" = "--all" ] && LS_ARGS+=(--all)
+
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo ${LS_ARGS[*]}" | python3 -c '
+import json, re, sys
+
+agents = json.load(sys.stdin)
+rows = []
+for a in agents:
+    name = a.get("name") or ""
+    m = re.match(r"^((?:[\w.-]+/)?[\w.-]+#\d+): (.*)", name)
+    if not m:
+        continue
+    issue = m.group(1)
+    if "/" not in issue:
+        issue = "tailscale/" + issue
+    rows.append((issue, a.get("status","?"), a.get("shortId") or a.get("id","?"),
+                 a.get("provider","?"), m.group(2)[:55]))
+
+if not rows:
+    print("no issue agents (dispatch with: take corp#123 / chop)")
+else:
+    for issue, status, aid, provider, title in sorted(rows):
+        print(f"{issue:28} {status:10} {aid:9} {provider:26} {title}")
+'

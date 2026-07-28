@@ -24,6 +24,8 @@
 
       xremap-flake.url = "github:xremap/nix-flake";
 
+      paseo.url = "github:getpaseo/paseo";                                 # Paseo daemon for AI coding agents (LLM sandbox VMs)
+
       nixpkgs-wayland.inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -82,7 +84,7 @@
       # Automatically available for both x86_64-linux and aarch64-linux
       homeConfigurations =
         let
-          mkHomeConfig = systemArch:
+          mkHomeConfig = systemArch: extraModules:
             let
               systemPkgs = import nixpkgs {
                 system = systemArch;
@@ -91,6 +93,9 @@
             in
             home-manager.lib.homeManagerConfiguration {
               pkgs = systemPkgs;
+              extraSpecialArgs = {
+                paseoPackage = inputs.paseo.packages.${systemArch}.paseo;
+              };
               modules = [
                 ./users/default/home-manager-server.nix
                 {
@@ -100,16 +105,21 @@
                     stateVersion = "23.05";
                   };
                 }
-              ];
+              ] ++ extraModules;
             };
         in
         {
           # Generate configs for all Linux architectures
-          "${user}@x86_64-linux" = mkHomeConfig "x86_64-linux";
-          "${user}@aarch64-linux" = mkHomeConfig "aarch64-linux";
+          "${user}@x86_64-linux" = mkHomeConfig "x86_64-linux" [ ];
+          "${user}@aarch64-linux" = mkHomeConfig "aarch64-linux" [ ];
 
           # Default to current system
-          ${user} = mkHomeConfig builtins.currentSystem;
+          ${user} = mkHomeConfig builtins.currentSystem [ ];
+
+          # LLM sandbox VM profile: server config + paseo daemon + corp git workflow
+          # (see LLM-VM.md; username comes from $USER, so works for the ubuntu user)
+          "llm@x86_64-linux" = mkHomeConfig "x86_64-linux" [ ./modules/llm-vm.nix ];
+          "llm@aarch64-linux" = mkHomeConfig "aarch64-linux" [ ./modules/llm-vm.nix ];
         };
 
       darwinConfigurations.macbook-m1 = mkDarwin "macbook-m1" rec {

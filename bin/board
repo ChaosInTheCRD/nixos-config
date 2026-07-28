@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# List issues on the Kubernetes & Containers project board (via maintner,
+# read-only, no GitHub auth). Default view: Not Started + unassigned.
+#
+# usage: board [--all] [--status <s>] [--label <l>] [--grep <pat>] [--limit N] [--json]
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+STATUS="Not Started" ONLY_UNASSIGNED=1 LABEL="" GREP="" LIMIT=0 JSON=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --all) ONLY_UNASSIGNED=0 ;;
+        --status) STATUS="$2"; shift ;;
+        --label) LABEL="$2"; shift ;;
+        --grep) GREP="$2"; shift ;;
+        --limit) LIMIT="$2"; shift ;;
+        --json) JSON=1 ;;
+        -h|--help) sed -n '2,6p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) echo "unknown flag: $1" >&2; exit 1 ;;
+    esac
+    shift
+done
+
+maintner_query ListProjectItems "{\"owner\":\"tailscale\",\"project_number\":$BOARD_PROJECT}" \
+| STATUS="$STATUS" ONLY_UNASSIGNED="$ONLY_UNASSIGNED" LABEL="$LABEL" GREP="$GREP" LIMIT="$LIMIT" JSON="$JSON" python3 -c '
+import json, os, re, sys
+
+items = json.load(sys.stdin)["items"]
+status, label, grep = os.environ["STATUS"], os.environ["LABEL"], os.environ["GREP"]
+only_unassigned = os.environ["ONLY_UNASSIGNED"] == "1"
+limit, as_json = int(os.environ["LIMIT"]), os.environ["JSON"] == "1"
+
+out = []
+for it in items:
+    if it["is_pr"]:
+        continue
+    if status and it["status"] != status:
+        continue
+    if only_unassigned and it.get("assignees"):
+        continue
+    labels = [l["name"] for l in it.get("labels") or []]
+    if label and label not in labels:
+        continue
+    if grep and not re.search(grep, it["title"], re.I):
+        continue
+    out.append({"id": it["id"], "title": it["title"], "status": it["status"],
+                "labels": labels, "url": it["url"],
+                "assignees": [u.get("login","?") for u in it.get("assignees") or []]})
+
+out.sort(key=lambda i: i["id"])
+if limit:
+    out = out[:limit]
+
+if as_json:
+    json.dump(out, sys.stdout, indent=2); print()
+else:
+    for i in out:
+        labs = ",".join(l for l in i["labels"] if l not in ("kubernetes",)) or "-"
+        iid, ititle = i["id"], i["title"]
+        print(f"{iid:28} [{labs}] {ititle[:70]}")
+    print(f"\n{len(out)} issues", file=sys.stderr)
+'
