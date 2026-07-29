@@ -1,9 +1,13 @@
 # Shared helpers for the LLM-VM workflow CLIs (board/take/chop/taken).
 # Sourced, not executed.
 
-LLM_VM="${LLM_VM:-chaosinthecrd-my-precious.corp.ts.net}"
-MAINTNER_API="${MAINTNER_API:-http://maintner.corp.ts.net/api/gh}"
-BOARD_PROJECT="${BOARD_PROJECT:-173}"   # tailscale org project: Kubernetes & Containers
+# Internal values (VM hostname, API endpoints, board number) live in a
+# private repo; install its env file to ~/.config/llm-vm/env. Env vars
+# still override, and the old defaults apply if the file is absent.
+[ -f "$HOME/.config/llm-vm/env" ] && . "$HOME/.config/llm-vm/env"
+LLM_VM="${LLM_VM:?LLM_VM not set — install ~/.config/llm-vm/env from the private dots repo}"
+MAINTNER_API="${MAINTNER_API:?MAINTNER_API not set — install ~/.config/llm-vm/env}"
+BOARD_PROJECT="${BOARD_PROJECT:?BOARD_PROJECT not set — install ~/.config/llm-vm/env}"
 
 llm_ssh() {
     ssh -o BatchMode=yes "$LLM_VM" "$@"

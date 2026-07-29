@@ -2,7 +2,10 @@
 .PHONY: install update switch bootstrap build-server home-manager setup-home-manager bootstrap-llm help
 
 # LLM sandbox VM (corp workstation) for `make bootstrap-llm`
-VM ?= chaosinthecrd-my-precious.corp.ts.net
+# Default LLM VM comes from the private env file (see bin/_llm-lib.sh);
+# override with VM=<name> or set it in ~/.config/llm-vm/env
+-include $(HOME)/.config/llm-vm/env
+VM ?= $(LLM_VM)
 
 # Get the path to this Makefile and directory
 MAKEFILE_DIR := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
@@ -84,6 +87,14 @@ bootstrap: install update switch
 
 bootstrap-llm:
 	@echo "Bootstrapping LLM sandbox VM: $(VM)"
+	@if [ -d $(HOME)/Git/chaosinthecrd-private-dots/vm-files ]; then \
+		echo "Copying private VM files (testctl, agent context)"; \
+		ssh $(USER)@$(VM) 'mkdir -p ~/.config/testctl'; \
+		scp $(HOME)/Git/chaosinthecrd-private-dots/vm-files/testctl-start.sh $(USER)@$(VM):.config/testctl/start.sh; \
+		ssh $(USER)@$(VM) 'chmod +x ~/.config/testctl/start.sh'; \
+		scp $(HOME)/Git/chaosinthecrd-private-dots/vm-files/claude_context.md $(USER)@$(VM):.claude_context.md.new; \
+		ssh $(USER)@$(VM) '[ -f ~/.claude_context.md ] || mv ~/.claude_context.md.new ~/.claude_context.md; rm -f ~/.claude_context.md.new'; \
+	fi
 	ssh $(USER)@$(VM) 'bash -s' < $(MAKEFILE_DIR)/scripts/bootstrap-llm-vm.sh
 
 update-llm:

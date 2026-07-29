@@ -34,7 +34,7 @@ fi
 
 # Skip issues that already have a dispatched agent (matched by title prefix,
 # "owner/repo#N: ..." as set by take)
-EXISTING=$(llm_ssh 'export PATH="$HOME/.nix-profile/bin:$PATH"; paseo ls --json' \
+EXISTING=$(llm_ssh 'export PATH="$HOME/.nix-profile/bin:$PATH"; paseo ls --json' < /dev/null \
     | python3 -c '
 import json, re, sys
 for a in json.load(sys.stdin):
@@ -43,21 +43,43 @@ for a in json.load(sys.stdin):
         issue = m.group(1)
         print(issue if "/" in issue else "tailscale/" + issue)' || true)
 
-echo "Will dispatch agents for:"
-IDS=()
-while IFS= read -r id; do
+# Numbered menu with title + description snippet (body fetched per issue)
+CANDIDATES=()
+i=0
+while IFS=$'\t' read -r id title; do
     if echo "$EXISTING" | grep -qxF "$id"; then
-        echo "  $id  (skipped: agent already exists)"
-    else
-        echo "  $id"
-        IDS+=("$id")
+        echo "      $id  (skipped: agent already exists)"
+        continue
     fi
-done < <(echo "$SELECTED" | python3 -c 'import json,sys; [print(i["id"]) for i in json.load(sys.stdin)]')
+    i=$((i+1))
+    CANDIDATES+=("$id")
+    REPO_Q="${id%#*}" NUM_Q="${id##*#}"
+    BODY=$(maintner_query GetIssue "{\"repo\":\"$REPO_Q\",\"number\":$NUM_Q}" \
+        | python3 -c 'import json,sys,textwrap; b=(json.load(sys.stdin).get("body") or "").strip(); print(textwrap.shorten(" ".join(b.split()), 200, placeholder="..."))' \
+        2>/dev/null || echo "")
+    printf '\033[1m[%d] %s\033[0m  %s\n' "$i" "$id" "$title"
+    [ -n "$BODY" ] && printf '      %s\n' "$BODY"
+done < <(echo "$SELECTED" | python3 -c '
+import json, sys
+for i in json.load(sys.stdin):
+    print(i["id"] + "\t" + i["title"])')
 
-[ ${#IDS[@]} -gt 0 ] || { echo "nothing to do"; exit 0; }
-printf 'Dispatch %d agents? [y/N] ' "${#IDS[@]}"
-read -r ANSWER
-[ "$ANSWER" = "y" ] || { echo "aborted"; exit 1; }
+[ ${#CANDIDATES[@]} -gt 0 ] || { echo "nothing to do"; exit 0; }
+echo
+printf 'Select issues to chop (e.g. "1 3 4", "all", empty = abort): '
+read -r SELECTION || SELECTION=""
+[ -n "$SELECTION" ] || { echo "aborted"; exit 0; }
+
+IDS=()
+if [ "$SELECTION" = "all" ]; then
+    IDS=("${CANDIDATES[@]}")
+else
+    for n in $SELECTION; do
+        [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ] && [ "$n" -le ${#CANDIDATES[@]} ] \
+            || { echo "bad selection: $n" >&2; exit 1; }
+        IDS+=("${CANDIDATES[$((n-1))]}")
+    done
+fi
 
 FAILED=0
 for id in "${IDS[@]}"; do
@@ -65,8 +87,9 @@ for id in "${IDS[@]}"; do
     TAKE_ARGS=(--no-notes)
     [ -n "$PROVIDER" ] && TAKE_ARGS+=(--provider "$PROVIDER")
     NOTES="This is an unattended batch investigation. Do NOT implement unless the fix
-is small and obvious — prioritize a high-quality investigation writeup in
-NOTES.md that makes it fast for me to pick this up later." \
+is small and obvious — prioritize a high-quality investigation writeup (in the
+findings file, never committed to the repo) that makes it fast for me to pick
+this up later." \
         "$BIN_DIR/take" "$id" "${TAKE_ARGS[@]}" || { echo "WARN: take $id failed" >&2; FAILED=$((FAILED+1)); }
 done
 echo

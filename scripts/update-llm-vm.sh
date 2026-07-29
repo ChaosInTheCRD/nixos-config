@@ -14,7 +14,8 @@
 
 set -euo pipefail
 
-VM="${VM:-chaosinthecrd-my-precious.corp.ts.net}"
+[ -f "$HOME/.config/llm-vm/env" ] && . "$HOME/.config/llm-vm/env"
+VM="${VM:-${LLM_VM:?VM/LLM_VM not set — install ~/.config/llm-vm/env from the private dots repo}}"
 SSH_USER="${SSH_USER:-$USER}"
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 NIX_CONFIG="experimental-features = nix-command flakes"

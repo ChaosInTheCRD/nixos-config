@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# Share Mac-side kubernetes contexts with agents on the LLM VM.
+# fzf multi-select (TAB marks, Enter confirms) -> kubectl proxy per context
+# (background, Mac-side auth) -> one background ssh -R tunnel -> kubeconfig
+# on the VM with one context per shared cluster.
+#
+# usage: kubeshare [ctx ...]     select/share contexts (fzf if none given)
+#        kubeshare -l            list active shares
+#        kubeshare -d            stop everything (proxies + tunnel)
+#
+# State: /tmp/kubeshare/ (pids + port map). Shares die if the Mac sleeps.
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+STATE_DIR=/tmp/kubeshare
+BASE_PORT=8101
+
+stop_all() {
+    if [ -d "$STATE_DIR" ]; then
+        [ -f "$STATE_DIR/pids" ] && while read -r pid; do kill "$pid" 2>/dev/null || true; done < "$STATE_DIR/pids"
+        rm -rf "$STATE_DIR"
+    fi
+    llm_ssh 'rm -f ~/.kube/shared-contexts.yaml' 2>/dev/null || true
+    echo "kubeshare: stopped"
+}
+
+case "${1:-}" in
+    -d) stop_all; exit 0 ;;
+    -l) [ -f "$STATE_DIR/map" ] && cat "$STATE_DIR/map" || echo "no active shares"; exit 0 ;;
+    -h|--help) sed -n '2,11p' "$0" | sed 's/^# \?//'; exit 0 ;;
+esac
+
+if [ -d "$STATE_DIR" ]; then
+    echo "kubeshare already active:"; cat "$STATE_DIR/map"
+    echo "run 'kubeshare -d' first to reshare"; exit 1
+fi
+
+# --- select contexts ---
+ALL_CONTEXTS=$(kubectl config get-contexts -o name)
+if [ $# -gt 0 ]; then
+    CONTEXTS=("$@")
+else
+    mapfile -t CONTEXTS < <(printf '%s\n' "$ALL_CONTEXTS" | fzf --multi \
+        --prompt="share clusters with the VM (TAB=select, Enter=confirm) > ")
+fi
+[ ${#CONTEXTS[@]} -gt 0 ] || { echo "nothing selected"; exit 0; }
+
+mkdir -p "$STATE_DIR"
+: > "$STATE_DIR/pids"; : > "$STATE_DIR/map"
+
+# --- kubectl proxy per context + build VM kubeconfig ---
+KUBECONFIG_VM='apiVersion: v1
+kind: Config
+clusters:'
+CTX_BLOCK='contexts:'
+FORWARDS=()
+port=$BASE_PORT
+for ctx in "${CONTEXTS[@]}"; do
+    printf '%s\n' "$ALL_CONTEXTS" | grep -qxF "$ctx" || { echo "unknown context: $ctx" >&2; stop_all; exit 1; }
+    kubectl proxy --context "$ctx" --port "$port" >/dev/null 2>&1 &
+    echo $! >> "$STATE_DIR/pids"
+    # sanitize context name for kubeconfig (short, no colons/slashes)
+    short=$(echo "$ctx" | sed -E 's|.*/||; s/[^a-zA-Z0-9._-]/-/g' | cut -c1-40)
+    KUBECONFIG_VM+="
+- name: $short
+  cluster:
+    server: http://127.0.0.1:$port"
+    CTX_BLOCK+="
+- name: $short
+  context:
+    cluster: $short"
+    FORWARDS+=(-R "${port}:localhost:${port}")
+    echo "$ctx -> VM 127.0.0.1:$port (context: $short)" >> "$STATE_DIR/map"
+    port=$((port+1))
+done
+KUBECONFIG_VM+="
+$CTX_BLOCK
+current-context: $(echo "${CONTEXTS[0]}" | sed -E 's|.*/||; s/[^a-zA-Z0-9._-]/-/g' | cut -c1-40)"
+
+sleep 1  # let proxies bind before tunneling
+
+# --- ship kubeconfig + one background tunnel for all ports ---
+printf '%s\n' "$KUBECONFIG_VM" | llm_ssh 'cat > ~/.kube/shared-contexts.yaml'
+ssh -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    "${FORWARDS[@]}" "$LLM_VM" 'exec sleep infinity' >/dev/null 2>&1 &
+echo $! >> "$STATE_DIR/pids"
+
+sleep 2
+if ! kill -0 "$(tail -1 "$STATE_DIR/pids")" 2>/dev/null; then
+    echo "error: ssh tunnel failed (stale ports on the VM? try again in a minute)" >&2
+    stop_all; exit 1
+fi
+
+echo "shared with the VM (kubeconfig ~/.kube/shared-contexts.yaml):"
+cat "$STATE_DIR/map"
+echo
+echo "agents use: kubectl --kubeconfig ~/.kube/shared-contexts.yaml --context <name> ..."
+echo "stop with:  kubeshare -d   (shares die if this Mac sleeps)"

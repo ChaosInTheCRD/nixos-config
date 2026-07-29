@@ -250,8 +250,22 @@ vmshare() {
     return 1
   fi
   local args=()
-  for p in "$@"; do args+=(-R "$p:localhost:$p"); done
+  # ${p} braces required: bare $p:l... makes zsh eat ":l" as a modifier
+  for p in "$@"; do args+=(-R "${p}:localhost:${p}"); done
   echo "forwarding to VM localhost: $*  (Ctrl-C to stop)"
-  ssh -N -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-    "${args[@]}" chaosinthecrd@chaosinthecrd-my-precious.corp.ts.net
+  # No -N: Tailscale SSH check mode needs a session channel, otherwise the
+  # forward is refused whenever the auth check isn't fresh. A sleeping remote
+  # command holds the tunnel without a usable shell.
+  [ -f "$HOME/.config/llm-vm/env" ] && . "$HOME/.config/llm-vm/env"
+  if [ -z "${LLM_VM:-}" ]; then
+    echo "vmshare: LLM_VM not set; install ~/.config/llm-vm/env from the private dots repo" >&2
+    return 1
+  fi
+  ssh -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+    "${args[@]}" "$LLM_VM" \
+    'echo "tunnel up"; exec sleep infinity'
 }
+
+# oh-my-zsh's core lib defines a `take` function (mkdir+cd) that shadows
+# our bin/take issue dispatcher; remove it so the binary wins.
+unfunction take 2>/dev/null || true

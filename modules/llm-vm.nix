@@ -35,6 +35,31 @@ let
     exec ${pkgs.socat}/bin/socat "TCP-LISTEN:$1,''${addr:+bind=$addr,}fork,reuseaddr" "TCP:127.0.0.1:$1"
   '';
 
+  # Long-lived dev-control-plane service for e2e tests. The actual command
+  # is deliberately NOT in this (public) repo — the unit runs
+  # ~/.config/testctl/start.sh, which is private and copied over by the
+  # bootstrap from the Mac's gitignored scratch copy at
+  # the private dots repo (vm-files/testctl-start.sh); revive from
+  # there if the VM dies.
+  testctlStart = pkgs.writeShellScript "testctl-start" ''
+    SCRIPT="$HOME/.config/testctl/start.sh"
+    if [ ! -x "$SCRIPT" ]; then
+      echo "testctl: $SCRIPT missing or not executable; not starting." >&2
+      echo "Install it from the private dots repo: vm-files/testctl-start.sh" >&2
+      exit 0
+    fi
+    exec "$SCRIPT"
+  '';
+
+  testctlReset = pkgs.writeShellScriptBin "testctl-reset" ''
+    echo "Wiping testctl state (tailnet, devices, scenario credentials)..."
+    systemctl --user stop testctl
+    rm -rf "$HOME/.local/state/testctl"
+    [ -L /tmp/k8s-operator-e2e ] && rm -f /tmp/k8s-operator-e2e
+    systemctl --user start testctl
+    echo "testctl restarted fresh (first start recompiles; give it a minute)"
+  '';
+
   exposeHelper = pkgs.writeShellScriptBin "expose" ''
     usage() {
       echo "usage: expose <port>       publish localhost:<port> on all interfaces (tailnet)"
@@ -56,6 +81,7 @@ in
   home.packages = [
     paseoPackage
     exposeHelper
+    testctlReset
     pkgs.socat
     pkgs.codex
     pkgs.opencode
@@ -79,6 +105,24 @@ in
       RestartSec = 5;
       KillSignal = "SIGTERM";
       TimeoutStopSec = 15;
+    };
+    Install = {
+      WantedBy = [ "default.target" ];
+    };
+  };
+
+  systemd.user.services.testctl = {
+    Unit = {
+      Description = "Long-lived test-control service for e2e tests";
+      After = [ "network.target" ];
+    };
+    Service = {
+      ExecStart = "${testctlStart}";
+      Environment = [ "PATH=${paseoPath}" ];
+      Restart = "on-failure";
+      RestartSec = 10;
+      # ./tool/go recompiles on first start after a corp update; be patient
+      TimeoutStartSec = 600;
     };
     Install = {
       WantedBy = [ "default.target" ];

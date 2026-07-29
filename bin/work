@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Shared work log for agents + humans on the LLM VM. One directory per piece
+# of work under ~/work/<slug>/ (issue.json, expectations.md, LOG.md, ref,
+# repo, branches). Agents append to LOG.md; commits carry an "Issue: <ref>"
+# trailer so `work sync` can re-map work to branches even after local
+# renames/rebases on another machine.
+#
+# usage: work ls                       list work dirs (ref, branches, last entry)
+#        work show <slug>              print a work dir's LOG.md
+#        work log <slug> <text...>     append a timestamped entry to LOG.md
+#        work new <slug> [ref] [repo]  create a work dir skeleton
+#        work sync                     re-scan repos; refresh each dir's branches
+set -euo pipefail
+
+WORK_ROOT="${WORK_ROOT:-$HOME/work}"
+mkdir -p "$WORK_ROOT"
+
+cmd="${1:-ls}"; shift || true
+
+case "$cmd" in
+ls)
+    found=0
+    for d in "$WORK_ROOT"/*/; do
+        [ -d "$d" ] || continue
+        found=1
+        slug=$(basename "$d")
+        ref=$(cat "$d/ref" 2>/dev/null || echo "-")
+        branches=""
+        [ -f "$d/branches" ] && branches=$(tr '\n' ',' < "$d/branches" | sed 's/,$//')
+        last=$(grep -E '^## ' "$d/LOG.md" 2>/dev/null | tail -1 | sed 's/^## //' || true)
+        printf '%-24s %-28s %s\n' "$slug" "$ref" "${branches:--}"
+        [ -n "$last" ] && printf '    last: %s\n' "$last"
+    done
+    [ "$found" -eq 1 ] || echo "no work dirs in $WORK_ROOT"
+    ;;
+show)
+    slug="${1:?usage: work show <slug>}"
+    cat "$WORK_ROOT/$slug/LOG.md" 2>/dev/null || { echo "no LOG.md for $slug" >&2; exit 1; }
+    ;;
+log)
+    slug="${1:?usage: work log <slug> <text>}"; shift
+    [ $# -gt 0 ] || { echo "usage: work log <slug> <text>" >&2; exit 1; }
+    mkdir -p "$WORK_ROOT/$slug"
+    {
+        echo
+        echo "## $(date -u +%Y-%m-%dT%H:%MZ) — ${USER:-agent}"
+        printf '%s\n' "$*"
+    } >> "$WORK_ROOT/$slug/LOG.md"
+    echo "logged to $WORK_ROOT/$slug/LOG.md"
+    ;;
+new)
+    slug="${1:?usage: work new <slug> [ref] [repo]}"
+    d="$WORK_ROOT/$slug"
+    mkdir -p "$d"
+    [ -n "${2:-}" ] && echo "$2" > "$d/ref"
+    [ -n "${3:-}" ] && echo "$3" > "$d/repo"
+    [ -f "$d/LOG.md" ] || echo "# Work log: $slug" > "$d/LOG.md"
+    echo "$d"
+    ;;
+sync)
+    for d in "$WORK_ROOT"/*/; do
+        [ -f "$d/ref" ] && [ -f "$d/repo" ] || continue
+        ref=$(cat "$d/ref"); repo=$(cat "$d/repo")
+        repo="${repo/#\~/$HOME}"
+        [ -d "$repo/.git" ] || { echo "$(basename "$d"): repo $repo missing, skipped"; continue; }
+        shas=$(git -C "$repo" log --all --grep="Issue: $ref" --format=%H 2>/dev/null | head -50 || true)
+        if [ -z "$shas" ]; then
+            echo "$(basename "$d"): no commits carry 'Issue: $ref' yet"
+            continue
+        fi
+        branches=$(for s in $shas; do
+            git -C "$repo" branch --format='%(refname:short)' --contains "$s" 2>/dev/null
+        done | sort -u | grep -v '^$' || true)
+        printf '%s\n' "$branches" > "$d/branches"
+        echo "$(basename "$d"): $(echo "$branches" | tr '\n' ',' | sed 's/,$//')"
+    done
+    ;;
+*)
+    sed -n '2,12p' "$0" | sed 's/^# \?//'
+    exit 1
+    ;;
+esac

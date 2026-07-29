@@ -52,7 +52,6 @@
       "coreutils"
       "mosh"
       "flyctl"
-      "terraform"
     ];
     casks = [
       "firefox"

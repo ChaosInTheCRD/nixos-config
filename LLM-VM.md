@@ -22,7 +22,7 @@ pairings) is owned by paseo itself and never touched by this config.
 From this repo on the Mac:
 
 ```bash
-make bootstrap-llm                 # defaults to VM=chaosinthecrd-my-precious.corp.ts.net
+make bootstrap-llm                 # VM name comes from ~/.config/llm-vm/env (private dots repo)
 VM=some-other-vm make bootstrap-llm
 ```
 
@@ -43,10 +43,10 @@ home-manager switch -b backup --flake ".#llm@x86_64-linux" --impure
 
 ```bash
 # CLI from the Mac
-paseo --host chaosinthecrd-my-precious.corp.ts.net:6767 ls
+paseo --host <vm-name>:6767 ls
 
 # Desktop app: Settings -> Connections -> add host
-# Phone: pair against http://chaosinthecrd-my-precious.corp.ts.net:6767
+# Phone: pair against http://<vm-name>:6767
 #        (or via the app.paseo.sh relay)
 ```
 

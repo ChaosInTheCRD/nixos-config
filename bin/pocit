@@ -42,8 +42,9 @@ fi
 
 VMHOME=$(llm_ssh 'echo "$HOME"')
 SLUG=$(slugify "${PROJECT:-$(basename "${FILE%.*}")}")
-CONTEXT_FILE=".paseo-context-poc-$SLUG.md"
-printf '%s\n' "$SPEC" | llm_ssh "cat > \"$CONTEXT_FILE\""
+llm_ssh "mkdir -p ~/work/poc-$SLUG && [ -f ~/work/poc-$SLUG/LOG.md ] || echo '# Work log: poc-$SLUG' > ~/work/poc-$SLUG/LOG.md"
+CONTEXT_FILE="work/poc-$SLUG/spec.md"
+printf '%s\n' "$SPEC" | llm_ssh "cat > ~/$CONTEXT_FILE"
 
 AGENT_ARGS=(run --background --provider "$PROVIDER" --title "poc: $SLUG")
 
@@ -65,11 +66,13 @@ PROMPT="Build a proof of concept. The full spec is in ~/$CONTEXT_FILE — read i
 Ground rules:
 - Work autonomously start to finish. Do NOT end your turn with questions for
   me — when something is ambiguous, pick the most reasonable interpretation,
-  record it under 'Assumptions' in NOTES.md, and keep going.
+  record it under 'Assumptions' in the design notes, and keep going.
 - Scaffold the project properly (build tooling, deps, .gitignore).
 - Make it RUN: execute it, fix it, iterate until it demonstrably works.
-- README.md: what it is and exactly how to run it.
-- NOTES.md: design decisions, assumptions, current status, next steps.
+- README.md: what it is and exactly how to run it (committed — it belongs).
+- Design decisions/assumptions/status/next steps: append to the shared work
+  log as you go ('work log poc-$SLUG \"...\"'; extra files in ~/work/poc-$SLUG/),
+  NOT committed to the repo.
 - Commit as you go with clear messages. Do NOT push anywhere."
 
 echo "==> Dispatching POC agent in $WHERE"

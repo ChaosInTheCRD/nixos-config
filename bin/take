@@ -9,12 +9,13 @@
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0
+REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --repo-dir) REPO_DIR_OVERRIDE="$2"; shift ;;
         --provider) PROVIDER="$2"; shift ;;
         --no-notes) NO_NOTES=1 ;;
+        --share) SHARE=1 ;;
         -h|--help) sed -n '2,8p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) REF="$1" ;;
     esac
@@ -29,18 +30,61 @@ ISSUE_JSON=$(maintner_query GetIssue "{\"repo\":\"$REPO\",\"number\":$NUM,\"comm
 TITLE=$(echo "$ISSUE_JSON" | python3 -c 'import json,sys; print(json.load(sys.stdin)["title"])')
 echo "    $TITLE"
 
-# Your expectations for the agent
+# Your expectations for the agent. The full issue (body + comments) is
+# included as commented lines for reading; save with no uncommented content
+# to ABORT (use --no-notes to dispatch without notes).
 NOTES="${NOTES:-}"
 if [ "$NO_NOTES" -eq 0 ] && [ -z "$NOTES" ]; then
     NOTES_FILE=$(mktemp /tmp/take-notes-XXXXXX.md)
-    cat > "$NOTES_FILE" <<EOF
+    {
+        cat <<EOF
 # Notes for the agent working on $REPO#$NUM
 # "$TITLE"
-# Lines starting with # are stripped. Save empty to skip.
+#
+# Write your expectations below. Lines starting with # are stripped.
+# Save with nothing else to CANCEL this take.
+# ─────────────────────────── issue ───────────────────────────
 EOF
+        echo "$ISSUE_JSON" | python3 -c '
+import json, sys, textwrap
+d = json.load(sys.stdin)
+
+def emit(text):
+    for line in (text or "").splitlines() or [""]:
+        for chunk in textwrap.wrap(line, 76) or [""]:
+            print(f"# {chunk}")
+
+author = d.get("author", {}).get("login", "?")
+assignees = ",".join(a["login"] for a in d.get("assignees") or []) or "unassigned"
+milestone = (d.get("milestone") or {}).get("title") or ""
+print(f"# [author {author} | assigned: {assignees} | {milestone}]")
+print("#")
+emit(d.get("body"))
+for c in d.get("comments") or []:
+    print("#")
+    cauthor = c.get("author", {}).get("login", "?")
+    print(f"# -- comment by {cauthor} --")
+    emit(c.get("body"))
+'
+    } > "$NOTES_FILE"
     ${EDITOR:-vim} "$NOTES_FILE"
-    NOTES=$(grep -v '^#' "$NOTES_FILE" | sed -e '/./,$!d')
+    NOTES=$(grep -v '^#' "$NOTES_FILE" | sed -e '/./,$!d' || true)
     rm -f "$NOTES_FILE"
+    if [ -z "$NOTES" ]; then
+        echo "==> No notes written — cancelled (use --no-notes to dispatch without notes)."
+        exit 0
+    fi
+fi
+
+# Optionally share Mac-side kube contexts with the VM first (fzf multi-select)
+CLUSTER_NOTE=""
+if [ "$SHARE" -eq 1 ]; then
+    "$(dirname "$0")/kubeshare" || exit 1
+    CLUSTER_NOTE="
+Kubernetes clusters have been shared from my machine: use
+'kubectl --kubeconfig ~/.kube/shared-contexts.yaml config get-contexts' to see
+them and '--context <name>' to target one. They are live clusters — read/apply
+as the task needs, but never delete resources you didn't create."
 fi
 
 # Where the agent works on the VM (default: ~/Git/<repo-basename>)
@@ -49,30 +93,50 @@ VM_REPO="${REPO_DIR_OVERRIDE:-$(vm_repo_dir "$REPO")}"
 SLUG="issue-$NUM"
 BRANCH="chaosinthecrd/$SLUG"
 
-# Issue payload is written to a file on the VM rather than inlined in the
-# prompt, to keep the paseo command line sane for big issues.
-CONTEXT_FILE=".paseo-context-$SLUG.json"
-echo "$ISSUE_JSON" | llm_ssh "cat > \"$CONTEXT_FILE\""
+# Shared work directory on the VM: ~/work/<slug>/ holds the issue payload,
+# your expectations, and the append-only LOG.md every agent on this issue
+# shares. Re-taking the same issue reuses the dir (and its accumulated log).
+WORK_DIR="work/$SLUG"
+llm_ssh "mkdir -p ~/$WORK_DIR && [ -f ~/$WORK_DIR/LOG.md ] || echo '# Work log: $REF' > ~/$WORK_DIR/LOG.md; echo '$REF' > ~/$WORK_DIR/ref; echo '~/$VM_REPO' > ~/$WORK_DIR/repo"
+echo "$ISSUE_JSON" | llm_ssh "cat > ~/$WORK_DIR/issue.json"
+[ -n "$NOTES" ] && printf '%s\n' "$NOTES" | llm_ssh "cat > ~/$WORK_DIR/expectations.md"
+
+NOTES_BLOCK=""
+if [ -n "$NOTES" ]; then
+    NOTES_BLOCK=$(printf 'MY EXPECTATIONS (most important, follow these):\n%s\n' "$NOTES")
+fi
 
 PROMPT="You are working on GitHub issue $REPO#$NUM: \"$TITLE\".
 
-Full issue data (title, body, all comments) is in ~/$CONTEXT_FILE — read it first.
-
-$([ -n "$NOTES" ] && printf 'MY EXPECTATIONS (most important, follow these):\n%s\n' "$NOTES")
+Your shared work directory is ~/$WORK_DIR/ — read ALL of it first:
+issue.json (full issue + comments), expectations.md (my instructions, if
+present), and LOG.md (running log from every agent that has worked on this
+issue — earlier findings, decisions, dead ends).
+$CLUSTER_NOTE
+$NOTES_BLOCK
 
 Work autonomously start to finish — do NOT end your turn asking me questions.
 If something is ambiguous, pick the most reasonable interpretation, record it
-under 'Assumptions' in NOTES.md, and keep going. Repos live at ~/Git/<repo>;
-clone missing ones via https://github.com/tailscale/<repo> (auth is handled).
+in the log, and keep going. Repos live at ~/Git/<repo>; clone missing ones
+via https://github.com/tailscale/<repo> (auth is handled).
 
 Approach:
-1. Read the issue and comments carefully. Read ~/eng-log.md if it exists.
+1. Read the issue, LOG.md, and expectations carefully. Don't redo work the
+   log shows is already done — build on it.
 2. Investigate: find the relevant code, reproduce if feasible, identify root cause.
-3. Write your findings to NOTES.md in the worktree root: what you found, root
-   cause, proposed fix, open questions.
+3. Record findings, decisions, assumptions, and dead ends by APPENDING to the
+   log as you go: work log $SLUG \"<what you found/did>\". Substantial
+   writeups can be separate files inside ~/$WORK_DIR/ — never inside the repo.
+   NEVER commit notes/scratch files to the branch; commits must contain only
+   changes that belong in an eventual PR.
 4. Only implement the fix if you are confident in it; write tests for any code
    you change and run them.
-5. Commit your work to the branch (NOTES.md included). Do NOT push anywhere.
+5. Commit code changes to the branch with clear messages, and include this
+   trailer line at the end of EVERY commit message so work can be traced even
+   if branches are later renamed:
+     Issue: $REF
+   Do NOT push anywhere.
+6. Finish with a summary entry in the log (work log $SLUG \"...\").
 
 Useful here: 'gh issue view $REPO#$NUM' and 'gh' generally (read-only, maintner-backed,
 no auth needed); private tailscale repos clone via plain github.com URLs (rogitproxy)."
