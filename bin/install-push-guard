@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Install the unsigned-commit push guard (git-pre-push-guard) into the
+# current repo. Repos whose hooks are managed by ts-git-hook (corp,
+# tailscale) chain user hooks from <hook>.local, so the guard goes there;
+# plain repos get it as pre-push directly.
+#
+# usage: install-push-guard        (run inside the target repo)
+set -euo pipefail
+
+GUARD=$(command -v git-pre-push-guard) || { echo "git-pre-push-guard not on PATH" >&2; exit 1; }
+HOOK_DIR=$(git rev-parse --git-path hooks)
+mkdir -p "$HOOK_DIR"
+
+target="$HOOK_DIR/pre-push"
+if [ -x "$HOOK_DIR/ts-git-hook" ] || grep -qs 'ts-git-hook' "$HOOK_DIR/pre-push" 2>/dev/null; then
+    target="$HOOK_DIR/pre-push.local"
+fi
+
+if [ -e "$target" ] && [ "$(readlink "$target" 2>/dev/null)" != "$GUARD" ]; then
+    echo "install-push-guard: $target already exists and isn't the guard; not clobbering." >&2
+    echo "install-push-guard: inspect it and remove/merge manually, then re-run." >&2
+    exit 1
+fi
+
+ln -sf "$GUARD" "$target"
+echo "installed: $target -> $GUARD"

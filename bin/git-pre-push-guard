@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# pre-push hook: reject pushes to github.com that contain unsigned
+# commits (%G? = N). Signed-on-Mac commits pass; VM-made commits go
+# through `ship`, which re-signs them first. Bypass deliberately with:
+#   git push --no-verify
+#
+# Installed by install-push-guard as either .git/hooks/pre-push (plain
+# repos) or .git/hooks/pre-push.local (repos managed by ts-git-hook).
+# The ts-git-hook chain does NOT forward stdin, so when the ref list is
+# absent we fall back to checking HEAD against the remote's known refs.
+set -euo pipefail
+
+remote_name="${1:-}" remote_url="${2:-}"
+case "$remote_url" in
+    *github.com*) ;;
+    *) exit 0 ;;
+esac
+
+check_range() { # $@ = git log range args
+    local unsigned
+    unsigned=$(git log --format='%G? %h %s' "$@" | grep '^N ' || true)
+    if [ -n "$unsigned" ]; then
+        echo "pre-push: refusing to push unsigned commits to github:" >&2
+        echo "$unsigned" | sed 's/^N /  /' >&2
+        echo "pre-push: run \`ship\` to re-sign and push, or \`git push --no-verify\` to bypass." >&2
+        exit 1
+    fi
+}
+
+zero=0000000000000000000000000000000000000000
+saw_stdin=0
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+    saw_stdin=1
+    [ "$local_sha" != "$zero" ] || continue
+    if [ "$remote_sha" = "$zero" ]; then
+        check_range "$local_sha" --not --remotes="$remote_name"
+    else
+        check_range "$remote_sha..$local_sha"
+    fi
+done
+
+if [ "$saw_stdin" -eq 0 ] && git remote get-url "$remote_name" >/dev/null 2>&1; then
+    check_range HEAD --not --remotes="$remote_name"
+fi
+exit 0

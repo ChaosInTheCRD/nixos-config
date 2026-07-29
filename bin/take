@@ -91,7 +91,9 @@ fi
 VMHOME=$(llm_ssh 'echo "$HOME"')
 VM_REPO="${REPO_DIR_OVERRIDE:-$(vm_repo_dir "$REPO")}"
 SLUG="issue-$NUM"
-BRANCH="chaosinthecrd/$SLUG"
+TITLE_SLUG=$(printf '%s' "$TITLE" | tr '[:upper:]' '[:lower:]' | tr -d "'" \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -d- -f1-5 | cut -c1-48 | sed 's/-*$//')
+BRANCH="chaosinthecrd/${TITLE_SLUG:-$SLUG}"
 
 # Shared work directory on the VM: ~/work/<slug>/ holds the issue payload,
 # your expectations, and the append-only LOG.md every agent on this issue

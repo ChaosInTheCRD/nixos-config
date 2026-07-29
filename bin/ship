@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Ship the current branch: ensure every commit is signed, push to GitHub,
+# then sync the result back to the LLM VM (aif push + work sync) so agents
+# see the same history that landed on origin.
+#
+# usage: ship [base]        base defaults to origin/main
+#
+# Unsigned commits in base..HEAD are re-signed in place via
+# `git rebase --force-rebase --gpg-sign` (one YubiKey touch; messages,
+# authorship, and structure preserved). Note this flattens merge commits in
+# the range — agent branches are linear, so this doesn't normally apply.
+# The VM's checkout of this branch must be clean for the aif push to apply.
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+BASE="${1:-origin/main}"
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+[ "$BRANCH" != "HEAD" ] || { echo "ship: detached HEAD; check out a branch first" >&2; exit 1; }
+case "$BRANCH" in
+    main|master) echo "ship: refusing to ship $BRANCH; check out a feature branch" >&2; exit 1 ;;
+esac
+git diff-index --quiet HEAD || { echo "ship: working tree is dirty; commit or stash first" >&2; exit 1; }
+
+git fetch -q origin
+MB=$(git merge-base "$BASE" HEAD) || { echo "ship: no merge base with $BASE" >&2; exit 1; }
+[ "$MB" != "$(git rev-parse HEAD)" ] || { echo "ship: nothing to ship ($BASE already contains HEAD)" >&2; exit 1; }
+
+# %G? per commit: G/U = good/unknown-key signature, N = unsigned
+if git log --format='%G?' "$MB..HEAD" | grep -q 'N'; then
+    n=$(git log --format='%G?' "$MB..HEAD" | grep -c 'N')
+    echo "==> $n unsigned commit(s) in $MB..HEAD; re-signing (YubiKey touch expected)"
+    git rebase --force-rebase --gpg-sign "$MB"
+else
+    echo "==> all $(git rev-list --count "$MB..HEAD") commit(s) already signed"
+fi
+
+echo "==> pushing $BRANCH to origin"
+git push --force-with-lease origin "$BRANCH"
+
+echo "==> syncing $BRANCH back to the VM"
+aif push -f || {
+    echo "ship: aif push failed — the VM checkout of $BRANCH is probably dirty." >&2
+    echo "ship: GitHub push succeeded; fix the VM side and re-run ship to re-sync." >&2
+    exit 1
+}
+llm_ssh "PATH=\"\$HOME/Git/nixos-config/bin:\$HOME/.nix-profile/bin:\$PATH\" work sync" || \
+    echo "ship: work sync on VM failed (non-fatal); run it manually" >&2
+
+echo "==> shipped: origin/$BRANCH and VM are in sync"

@@ -117,6 +117,28 @@ Pushing into the checked-out branch works because the server git config sets
 `receive.denyCurrentBranch = updateInstead` (updates the VM's working tree in
 place — the VM copy must be clean for the push to apply).
 
+## Shipping a branch: ship
+
+`ship` (in `bin/`) closes the loop from agent branch to GitHub without
+letting unsigned commits through. VM-made commits are unsigned by design
+(the signing key lives on the Mac); `ship`:
+
+1. re-signs any unsigned commits in `base..HEAD` in place
+   (`git rebase --force-rebase --gpg-sign` — one YubiKey touch, messages
+   and structure preserved; base defaults to origin/main)
+2. pushes the branch to GitHub with `--force-with-lease`
+3. syncs the re-signed history back to the VM (`aif push -f`) and runs
+   `work sync` there so issue work dirs re-map to the branch
+
+So the usual flow is: `aif <branch>` to pull agent work down, restructure
+commits however you like (or not at all), then `ship`.
+
+As a backstop, `install-push-guard` (run once inside a repo) installs a
+pre-push hook that rejects pushes to github.com containing unsigned
+commits. In repos whose hooks are managed by ts-git-hook (corp,
+tailscale) it installs as `pre-push.local`, which the ts-git-hook
+dispatcher chains to. Bypass deliberately with `git push --no-verify`.
+
 ## Board workflow: board / take / chop / taken
 
 CLIs in `bin/` (on PATH via shell_exports) that drive the Kubernetes &
@@ -130,7 +152,8 @@ board --grep "e2e" --all     # --all includes assigned issues
 
 take corp#45571              # pull issue via maintner, open $EDITOR for your
                              # expectations, dispatch a background agent in an
-                             # isolated worktree (branch chaosinthecrd/issue-45571)
+                             # isolated worktree (branch chaosinthecrd/<slug>,
+                             # slugified from the issue title)
 take corp#45571 --provider codex   # default: claude (or set TAKE_PROVIDER)
 
 chop --label Refined --limit 5     # fan out investigation agents over board
