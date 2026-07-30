@@ -51,13 +51,86 @@ let
     exec "$SCRIPT"
   '';
 
+  # State path must match the private start.sh (~/.local/state/testctl) —
+  # a reset that wipes a different dir than the service writes silently
+  # restarts against the old tailnet DB.
   testctlReset = pkgs.writeShellScriptBin "testctl-reset" ''
+    if [ "''${1:-}" != "--force" ] && pgrep -f 'e2e\.test|go test.*k8s-operator/e2e' >/dev/null 2>&1; then
+      echo "testctl-reset: an e2e test run appears to be live:" >&2
+      pgrep -af 'e2e\.test|go test.*k8s-operator/e2e' >&2
+      echo "Resetting mid-run breaks its control tunnel and authkeys (see" >&2
+      echo "~/.claude_context.md). Re-run with --force if you are sure." >&2
+      exit 1
+    fi
     echo "Wiping testctl state (tailnet, devices, scenario credentials)..."
     systemctl --user stop testctl
     rm -rf "$HOME/.local/state/testctl"
     [ -L /tmp/k8s-operator-e2e ] && rm -f /tmp/k8s-operator-e2e
     systemctl --user start testctl
     echo "testctl restarted fresh (first start recompiles; give it a minute)"
+  '';
+
+  # First stop for "e2e tests hang / proxies never provision": checks the
+  # known failure modes from ~/.claude_context.md and says which remedy
+  # applies instead of leaving agents to dig through pod logs.
+  testctlDoctor = pkgs.writeShellScriptBin "testctl-doctor" ''
+    fail=0
+    warn() { echo "WARN: $*"; }
+    bad() { echo "FAIL: $*"; fail=1; }
+    ok() { echo "ok:   $*"; }
+
+    if systemctl --user is-active --quiet testctl; then
+      ok "testctl unit active"
+    else
+      bad "testctl unit not active — systemctl --user status testctl"
+    fi
+
+    restarts=$(systemctl --user show testctl -p NRestarts --value 2>/dev/null)
+    if [ "''${restarts:-0}" -gt 0 ]; then
+      warn "testctl has auto-restarted $restarts time(s) since load — a restart mid-run breaks that run's tunnel/authkeys (check: journalctl --user -u testctl)"
+    else
+      ok "no unexpected testctl restarts"
+    fi
+
+    if ${pkgs.netcat}/bin/nc -z 127.0.0.1 31544 2>/dev/null; then
+      ok "control listening on :31544"
+    else
+      bad "nothing listening on :31544 — devcontrol still compiling (first start takes minutes; journalctl --user -u testctl -f) or crashed"
+    fi
+
+    if [ -L /tmp/k8s-operator-e2e ] && [ -n "$(ls -A /tmp/k8s-operator-e2e 2>/dev/null)" ]; then
+      ok "/tmp/k8s-operator-e2e symlink with scenario credentials"
+    elif [ -L /tmp/k8s-operator-e2e ]; then
+      warn "/tmp/k8s-operator-e2e exists but is empty — wait for devcontrol to finish scenario generation"
+    else
+      bad "/tmp/k8s-operator-e2e is not a symlink — testctl start.sh hasn't run; restart the unit"
+    fi
+
+    if journalctl --user -u testctl --since -30min --no-pager 2>/dev/null \
+        | grep -qE 'node [^ ]+ not found|generating MapResponse.*not found'; then
+      bad "control is rejecting known nodes ('node not found' in recent logs) — test-tailnet state is corrupted/stale; run testctl-reset (NOT while a run is live)"
+    else
+      ok "no stale-node errors in recent control logs"
+    fi
+
+    if id -nG | grep -qw docker; then
+      ok "session has docker group"
+    else
+      warn "session lacks docker group (lingering user session predates usermod; fixed by VM reboot) — wrap docker/kind/go-test in: sg docker -c '...'"
+    fi
+
+    clusters=$(kind get clusters 2>/dev/null || sg docker -c 'kind get clusters' 2>/dev/null)
+    if echo "$clusters" | grep -q k8s-operator-e2e; then
+      warn "kind cluster k8s-operator-e2e already exists — reused clusters carry stale CRs; delete before a fresh run: kind delete cluster --name k8s-operator-e2e"
+    else
+      ok "no leftover k8s-operator-e2e kind cluster"
+    fi
+
+    if pgrep -f 'e2e\.test|go test.*k8s-operator/e2e' >/dev/null 2>&1; then
+      warn "an e2e run appears live — do NOT restart testctl or run testctl-reset until it finishes"
+    fi
+
+    exit $fail
   '';
 
   exposeHelper = pkgs.writeShellScriptBin "expose" ''
@@ -82,6 +155,7 @@ in
     paseoPackage
     exposeHelper
     testctlReset
+    testctlDoctor
     pkgs.socat
     pkgs.codex
     pkgs.opencode
