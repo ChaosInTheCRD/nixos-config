@@ -34,3 +34,18 @@ parse_issue_ref() { # sets REPO, NUM
 vm_repo_dir() { # $1=owner/repo
     echo "Git/$(basename "$1")"
 }
+
+# Create a paseo workspace on the VM; echoes "<workspace-id>\t<cwd>".
+# Args are passed through to `paseo workspace create` (e.g. --isolation,
+# --path, --title, --mode/--new-branch/--worktree-slug for worktrees).
+vm_workspace_create() {
+    llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo workspace create $(printf '%q ' "$@") --json" \
+        | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["workspaceId"] + "\t" + d["cwd"])'
+}
+
+# Terse workspace title from free text: lowercase, punctuation stripped,
+# first 4 words ("tsrecorder: authkey renewal doesn't..." -> "tsrecorder authkey renewal doesnt")
+ws_title_from() { # $1=text
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d "'" \
+        | sed -E 's/[^a-z0-9]+/ /g; s/^ +//; s/ +$//' | cut -d' ' -f1-4
+}

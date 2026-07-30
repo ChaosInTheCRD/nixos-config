@@ -4,16 +4,20 @@
 # then starts a background agent in an isolated worktree on the VM.
 #
 # usage: take <issue-ref> [--repo-dir <vm-path>] [--provider <p>] [--no-notes]
+#                         [--ws-title <title>]
 #        take corp#45571
 #        NOTES="just investigate" take corp#45571 --no-notes
+# The paseo workspace title defaults to the first words of the issue title
+# ("authkey reissuance"); override with --ws-title.
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0
+REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0 WS_TITLE=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --repo-dir) REPO_DIR_OVERRIDE="$2"; shift ;;
         --provider) PROVIDER="$2"; shift ;;
+        --ws-title) WS_TITLE="$2"; shift ;;
         --no-notes) NO_NOTES=1 ;;
         --share) SHARE=1 ;;
         -h|--help) sed -n '2,8p' "$0" | sed 's/^# \?//'; exit 0 ;;
@@ -143,13 +147,18 @@ Approach:
 Useful here: 'gh issue view $REPO#$NUM' and 'gh' generally (read-only, maintner-backed,
 no auth needed); private tailscale repos clone via plain github.com URLs (rogitproxy)."
 
-echo "==> Dispatching agent on $LLM_VM (worktree branch $BRANCH in ~/$VM_REPO)"
+WS_TITLE="${WS_TITLE:-$(ws_title_from "$TITLE")}"
+echo "==> Creating workspace \"$WS_TITLE\" (worktree branch $BRANCH in ~/$VM_REPO)"
+IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation worktree \
+    --path "$VMHOME/$VM_REPO" --title "$WS_TITLE" \
+    --mode branch-off --new-branch "$BRANCH" --worktree-slug "$SLUG")
+[ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
+
+echo "==> Dispatching agent on $LLM_VM (workspace $WS_ID)"
 AGENT_ARGS=(run --background
     --title "$REF: $TITLE"
     --label "issue=$REF"
-    --cwd "$VMHOME/$VM_REPO"
-    --new-workspace worktree --worktree-mode branch-off
-    --new-branch "$BRANCH" --worktree-slug "$SLUG"
+    --workspace "$WS_ID" --cwd "$WS_CWD"
     --provider "$PROVIDER")
 
 llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo $(printf '%q ' "${AGENT_ARGS[@]}") $(printf '%q' "$PROMPT")"

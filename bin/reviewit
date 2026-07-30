@@ -2,16 +2,19 @@
 # Spin up a dedicated code-review agent on the LLM VM for a PR or commit.
 #
 # usage: reviewit <pr-ref | commit-hash> [--repo <name>] [--provider <p>] [--quick]
+#                 [--ws-title <title>]
 #   reviewit corp#12345              review a PR (maintner-backed gh on the VM)
 #   reviewit tailscale/corp#12345
 #   reviewit abc1234 --repo corp     review a commit in ~/Git/corp on the VM
 #   --quick                          diff-read only (no building/testing), ~5min
+#   --ws-title                       paseo workspace title (default: "review <ref>")
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0
+TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE=""
 while [ $# -gt 0 ]; do
     case "$1" in
+        --ws-title) WS_TITLE="$2"; shift ;;
         --repo) REPO="$2"; shift ;;
         --repo=*) REPO="${1#--repo=}" ;;
         --provider) PROVIDER="$2"; shift ;;
@@ -68,6 +71,12 @@ $DEPTH
 - This is read-only review: leave the repo checkout clean (no commits, no
   edits there, no pushes)."
 
-echo "==> Dispatching review agent for $LABEL"
-llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo run --background --provider $(printf '%q' "$PROVIDER") --title $(printf '%q' "review: $LABEL") --cwd $(printf '%q' "$VMHOME/$VM_REPO") $(printf '%q' "$PROMPT")"
+# drop the owner from the label for the title: tailscale/corp#123 -> corp#123
+WS_TITLE="${WS_TITLE:-$(ws_title_from "review ${LABEL#*/}")}"
+IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation local \
+    --path "$VMHOME/$VM_REPO" --title "$WS_TITLE")
+[ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
+
+echo "==> Dispatching review agent for $LABEL (workspace $WS_ID)"
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo run --background --provider $(printf '%q' "$PROVIDER") --title $(printf '%q' "review: $LABEL") --workspace $(printf '%q' "$WS_ID") --cwd $(printf '%q' "$WS_CWD") $(printf '%q' "$PROMPT")"
 echo "==> Dispatched. Track with: paseo ls / attach via the app"

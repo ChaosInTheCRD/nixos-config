@@ -2,16 +2,18 @@
 # Spin up a POC-building agent on the LLM VM from a spec file.
 #
 # usage: pocit --file <spec.(md|txt|docx|rtf)> [--project <new-name> | --repo <existing>]
-#              [--provider <p>]
+#              [--provider <p>] [--ws-title <title>]
 #   --project  create a fresh git repo at ~/Git/<new-name> on the VM and build there
 #   --repo     build in an isolated worktree of an existing ~/Git/<repo>
 #   (neither)  defaults to --project <spec filename slug>
+#   --ws-title paseo workspace title (default: "poc <slug words>")
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}"
+FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" WS_TITLE=""
 while [ $# -gt 0 ]; do
     case "$1" in
+        --ws-title) WS_TITLE="$2"; shift ;;
         --file) FILE="$2"; shift ;;
         --file=*) FILE="${1#--file=}" ;;
         --project) PROJECT="$2"; shift ;;
@@ -46,20 +48,24 @@ llm_ssh "mkdir -p ~/work/poc-$SLUG && [ -f ~/work/poc-$SLUG/LOG.md ] || echo '# 
 CONTEXT_FILE="work/poc-$SLUG/spec.md"
 printf '%s\n' "$SPEC" | llm_ssh "cat > ~/$CONTEXT_FILE"
 
+WS_TITLE="${WS_TITLE:-$(ws_title_from "poc $SLUG")}"
 AGENT_ARGS=(run --background --provider "$PROVIDER" --title "poc: $SLUG")
 
 if [ -n "$PROJECT" ]; then
     # Fresh repo on the VM; agent works directly in it (nothing to isolate from)
     llm_ssh "mkdir -p ~/Git/$PROJECT && cd ~/Git/$PROJECT && { [ -d .git ] || { git init -q -b main && git commit -q --allow-empty -m 'init'; }; }"
     WHERE="new repo ~/Git/$PROJECT"
-    AGENT_ARGS+=(--cwd "$VMHOME/Git/$PROJECT")
+    IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation local \
+        --path "$VMHOME/Git/$PROJECT" --title "$WS_TITLE")
 else
     VM_REPO="Git/$(basename "$REPO")"
     WHERE="worktree of ~/$VM_REPO (branch chaosinthecrd/poc-$SLUG)"
-    AGENT_ARGS+=(--cwd "$VMHOME/$VM_REPO"
-        --new-workspace worktree --worktree-mode branch-off
-        --new-branch "chaosinthecrd/poc-$SLUG" --worktree-slug "poc-$SLUG")
+    IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation worktree \
+        --path "$VMHOME/$VM_REPO" --title "$WS_TITLE" \
+        --mode branch-off --new-branch "chaosinthecrd/poc-$SLUG" --worktree-slug "poc-$SLUG")
 fi
+[ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
+AGENT_ARGS+=(--workspace "$WS_ID" --cwd "$WS_CWD")
 
 PROMPT="Build a proof of concept. The full spec is in ~/$CONTEXT_FILE — read it first.
 

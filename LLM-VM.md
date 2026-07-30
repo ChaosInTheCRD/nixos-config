@@ -172,6 +172,14 @@ branch from the VM's repo.
 `chop` deliberately defaults to investigation-only prompts and a small
 `--limit` — the bottleneck is your review time, not compute.
 
+`take`, `pocit`, and `reviewit` create the paseo workspace explicitly
+(`paseo workspace create --title ...` + `paseo run --workspace ...`), so
+the workspace shows a short human title in the app ("authkey reissuance")
+instead of a branch name. The default title is derived from the issue
+title / slug / review ref; override with `--ws-title <title>` on any of
+the three. `reviewit` runs in a local (non-worktree) workspace on the
+repo checkout, as before — the title just separates it in the app.
+
 Two more dispatchers with the same shape:
 
 ```bash
