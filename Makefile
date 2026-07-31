@@ -96,6 +96,8 @@ bootstrap-llm:
 		ssh $(USER)@$(VM) '[ -f ~/.claude_context.md ] || mv ~/.claude_context.md.new ~/.claude_context.md; rm -f ~/.claude_context.md.new'; \
 		scp $(HOME)/Git/chaosinthecrd-private-dots/vm-files/claude_k8s_style.md $(USER)@$(VM):.claude_k8s_style.md.new; \
 		ssh $(USER)@$(VM) '[ -f ~/.claude_k8s_style.md ] || mv ~/.claude_k8s_style.md.new ~/.claude_k8s_style.md; rm -f ~/.claude_k8s_style.md.new'; \
+		scp $(HOME)/Git/chaosinthecrd-private-dots/vm-files/claude_reviewer_bradfitz.md $(USER)@$(VM):.claude_reviewer_bradfitz.md.new; \
+		ssh $(USER)@$(VM) '[ -f ~/.claude_reviewer_bradfitz.md ] || mv ~/.claude_reviewer_bradfitz.md.new ~/.claude_reviewer_bradfitz.md; rm -f ~/.claude_reviewer_bradfitz.md.new'; \
 	fi
 	ssh $(USER)@$(VM) 'bash -s' < $(MAKEFILE_DIR)/scripts/bootstrap-llm-vm.sh
 

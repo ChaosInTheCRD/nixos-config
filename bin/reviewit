@@ -13,15 +13,18 @@
 #   --ws-title                       paseo workspace title (default: "review <ref>")
 #   --share                          share Mac-side kube contexts with the VM first;
 #                                    the agent is briefed to verify against them
+#   --as <persona>                   review as a persona (~/.claude_reviewer_<p>.md
+#                                    on the VM), e.g. --as bradfitz
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE="" BASE="origin/main" SHARE=0
+TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE="" BASE="origin/main" SHARE=0 PERSONA=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --ws-title) WS_TITLE="$2"; shift ;;
         --base) BASE="$2"; shift ;;
         --share) SHARE=1 ;;
+        --as) PERSONA="$2"; shift ;;
         --repo) REPO="$2"; shift ;;
         --repo=*) REPO="${1#--repo=}" ;;
         --provider) PROVIDER="$2"; shift ;;
@@ -79,8 +82,20 @@ if [ "$SHARE" -eq 1 ]; then
     share_clusters_note || exit 1
 fi
 
+PERSONA_NOTE=""
+if [ -n "$PERSONA" ]; then
+    PERSONA_FILE=".claude_reviewer_$PERSONA.md"
+    llm_ssh "[ -f ~/$PERSONA_FILE ]" \
+        || { echo "error: no persona file ~/$PERSONA_FILE on the VM" >&2; exit 1; }
+    PERSONA_NOTE="
+PERSONA: read ~/$PERSONA_FILE first and review AS that persona - its
+priorities, severity language, and tone override the generic judging
+criteria below. Keep the output file format."
+    LABEL="$LABEL-as-$PERSONA"
+fi
+
 PROMPT="You are doing a focused code review of $SUBJECT
-$CLUSTER_NOTE
+$CLUSTER_NOTE$PERSONA_NOTE
 Ground rules:
 - Work autonomously. Do NOT end with questions to me — if context is missing,
   dig for it yourself (git log/blame, related issues via gh, surrounding code).

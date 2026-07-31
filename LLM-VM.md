@@ -194,6 +194,10 @@ reviewit abc1234 --repo corp                  # review a commit in ~/Git/corp
 reviewit chaosinthecrd/foo --repo tailscale   # review a VM-local branch (diff vs
                                               # --base, default origin/main) —
                                               # e.g. another agent's unpushed work
+reviewit corp#12345 --as bradfitz             # review as a persona: the agent
+                                              # adopts ~/.claude_reviewer_<p>.md
+                                              # (priorities, severity language,
+                                              # tone mined from real reviews)
 ```
 
 `take`, `pocit`, and `reviewit` all accept `--share`: pick Mac-side kube
