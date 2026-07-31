@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Dispatch a docs agent in ~/Git/tailscale-www for feature work done in
+# another repo. Reuses the feature's shared work dir (~/work/<slug>/) as
+# context: the agent reads issue.json + LOG.md + the feature branch diff,
+# writes docs on a dedicated www branch, and logs to the same LOG.md.
+#
+# usage: docsit <slug | issue-ref> [--branch <feature-branch>] [--no-notes]
+#               [--provider <p>] [--thinking <t>] [--ws-title <title>]
+#        docsit issue-38175
+#        docsit corp#38175 --branch chaosinthecrd/probes-proxygroup
+#   The feature branch is read from the work dir's branches file (work sync)
+#   when --branch is not given; errors out if it can't be determined.
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+SLUG="" BRANCH="" NO_NOTES=0 PROVIDER="${TAKE_PROVIDER:-claude}" THINKING="${TAKE_THINKING:-xhigh}" WS_TITLE=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --branch) BRANCH="$2"; shift ;;
+        --no-notes) NO_NOTES=1 ;;
+        --provider) PROVIDER="$2"; shift ;;
+        --thinking) THINKING="$2"; shift ;;
+        --ws-title) WS_TITLE="$2"; shift ;;
+        -h|--help) sed -n '2,13p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) SLUG="$1" ;;
+    esac
+    shift
+done
+[ -n "$SLUG" ] || { echo "usage: docsit <slug|issue-ref> [--branch <b>]" >&2; exit 1; }
+
+# Accept an issue ref (corp#123) as well as a work-dir slug (issue-123)
+if [[ "$SLUG" == *#* ]]; then
+    parse_issue_ref "$SLUG"
+    SLUG="issue-$NUM"
+fi
+
+WORK_DIR="work/$SLUG"
+llm_ssh "[ -d ~/$WORK_DIR ]" || { echo "error: no ~/$WORK_DIR on the VM (was this issue taken?)" >&2; exit 1; }
+REF=$(llm_ssh "cat ~/$WORK_DIR/ref 2>/dev/null" || true)
+FEATURE_REPO=$(llm_ssh "cat ~/$WORK_DIR/repo 2>/dev/null" || true)
+[ -n "$FEATURE_REPO" ] || { echo "error: ~/$WORK_DIR has no repo file" >&2; exit 1; }
+
+if [ -z "$BRANCH" ]; then
+    # Refresh the branch mapping (work sync greps for the Issue: trailer)
+    BRANCHES=$(llm_ssh "export PATH=\"\$HOME/Git/nixos-config/bin:\$PATH\"; work sync >/dev/null 2>&1; cat ~/$WORK_DIR/branches 2>/dev/null" || true)
+    case "$(printf '%s\n' "$BRANCHES" | grep -c .)" in
+        0) echo "error: no branch carries 'Issue: $REF' yet (feature not committed?); pass --branch" >&2; exit 1 ;;
+        1) BRANCH="$BRANCHES" ;;
+        *) echo "error: multiple branches carry this issue's commits; pass --branch:" >&2
+           printf '%s\n' "$BRANCHES" | sed 's/^/  /' >&2; exit 1 ;;
+    esac
+fi
+
+# Verify the branch exists in the feature repo checkout
+llm_ssh "git -C ${FEATURE_REPO/#\~/\$HOME} rev-parse --verify -q refs/heads/$(printf '%q' "$BRANCH") >/dev/null" \
+    || { echo "error: branch '$BRANCH' not found in $FEATURE_REPO on the VM" >&2; exit 1; }
+
+# Your expectations for the docs (what pages, what audience, what to skip)
+NOTES="${NOTES:-}"
+if [ "$NO_NOTES" -eq 0 ] && [ -z "$NOTES" ]; then
+    NOTES_FILE=$(mktemp /tmp/docsit-notes-XXXXXX.md)
+    cat <<EOF > "$NOTES_FILE"
+# Docs notes for $REF ($BRANCH)
+#
+# What should the docs cover? Which pages (KB article, changelog, CRD
+# reference)? Anything to deliberately leave out? Lines starting with #
+# are stripped; save empty to dispatch without notes.
+EOF
+    ${EDITOR:-vim} "$NOTES_FILE"
+    NOTES=$(grep -v '^#' "$NOTES_FILE" | sed -e '/./,$!d' || true)
+    rm -f "$NOTES_FILE"
+fi
+NOTES_BLOCK=""
+[ -n "$NOTES" ] && NOTES_BLOCK=$(printf 'MY EXPECTATIONS (most important, follow these):\n%s\n' "$NOTES")
+
+VMHOME=$(llm_ssh 'echo "$HOME"')
+DOCS_BRANCH="chaosinthecrd/docs-$SLUG"
+WS_TITLE="${WS_TITLE:-$(ws_title_from "docs $SLUG")}"
+
+echo "==> Creating workspace \"$WS_TITLE\" (worktree branch $DOCS_BRANCH in ~/Git/tailscale-www)"
+IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation worktree \
+    --path "$VMHOME/Git/tailscale-www" --title "$WS_TITLE" \
+    --mode branch-off --new-branch "$DOCS_BRANCH" --worktree-slug "docs-$SLUG")
+[ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
+
+PROMPT="You are writing documentation for feature work on GitHub issue $REF.
+The feature itself was implemented by another agent; you are the docs pass.
+
+Context, in reading order:
+1. ~/$WORK_DIR/ - the shared work directory: issue.json (full issue +
+   comments), expectations.md (the feature brief), LOG.md (running log from
+   every agent on this issue, including the one that wrote the feature -
+   its findings, decisions, and scope notes). Read ALL of it first.
+2. The feature code itself: branch $BRANCH in $FEATURE_REPO. See the change
+   with: git -C ${FEATURE_REPO/#\~/~} diff origin/main...$(printf '%q' "$BRANCH")
+   and its commits: git -C ${FEATURE_REPO/#\~/~} log origin/main..$(printf '%q' "$BRANCH")
+3. This repo's own conventions: read CLAUDE.md here, look at how existing
+   pages for similar features are written, and match them.
+$NOTES_BLOCK
+Ground rules:
+- Work autonomously start to finish - do NOT end your turn asking questions.
+  Ambiguity: pick the most reasonable interpretation, log it, keep going.
+- Document what a USER needs to know: what the feature does, how to enable
+  and configure it, constraints and defaults. Don't narrate implementation
+  details unless they affect users. Verify claims against the actual code
+  (flag names, defaults, CRD fields) rather than trusting the log.
+- If the feature isn't merged/released yet, note in the log which release
+  the docs should land with; still write them now.
+- Commit to this branch ($DOCS_BRANCH) with clear messages, ending every
+  commit message with the trailer: Issue: $REF
+  Do NOT push anywhere.
+- Log to the shared work log as you go and finish with a summary:
+  work log $SLUG \"docs: <what you did>\"
+- NEVER commit notes/scratch files; commits contain only doc changes."
+
+echo "==> Dispatching docs agent on $LLM_VM (workspace $WS_ID)"
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo run --background --provider $(printf '%q' "$PROVIDER") --thinking $(printf '%q' "$THINKING") --title $(printf '%q' "docs: $REF") --label $(printf '%q' "issue=$REF") --workspace $(printf '%q' "$WS_ID") --cwd $(printf '%q' "$WS_CWD") $(printf '%q' "$PROMPT")"
+echo "==> Dispatched. Review later with: aif $DOCS_BRANCH (in ~/Git/tailscale-www on your Mac)"

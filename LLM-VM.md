@@ -208,7 +208,21 @@ them (not just reason from code).
 `pocit` agents scaffold, build, run, and iterate until the POC demonstrably
 works (README + NOTES.md, committed). `reviewit` agents produce a
 severity-ordered review in `~/reviews/<ref>.md` on the VM and leave the
-checkout clean. All dispatch prompts instruct agents to work autonomously —
+checkout clean.
+
+```bash
+docsit issue-38175                # docs pass for feature work done on an issue:
+docsit corp#38175 --branch <b>    # fresh agent in a tailscale-www worktree
+                                  # (branch chaosinthecrd/docs-<slug>), briefed on
+                                  # the shared work dir + the feature branch diff;
+                                  # logs to the same LOG.md. Review on your Mac:
+                                  # aif chaosinthecrd/docs-<slug> in tailscale-www
+```
+
+Cross-repo context transfers through the work dir, not the agent: the docs
+agent reads issue.json, LOG.md, and the feature diff — same facts, fresh
+eyes — and the feature branch resolves automatically from the Issue:
+trailer (via work sync). All dispatch prompts instruct agents to work autonomously —
 record assumptions instead of stopping to ask questions — and the VM's
 `.claude_context.md` carries the `~/Git/<repo>` map so agents never stall on
 "where is the code".
