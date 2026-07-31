@@ -12,11 +12,12 @@
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0 WS_TITLE=""
+REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0 WS_TITLE="" THINKING="${TAKE_THINKING:-xhigh}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --repo-dir) REPO_DIR_OVERRIDE="$2"; shift ;;
         --provider) PROVIDER="$2"; shift ;;
+        --thinking) THINKING="$2"; shift ;;
         --ws-title) WS_TITLE="$2"; shift ;;
         --no-notes) NO_NOTES=1 ;;
         --share) SHARE=1 ;;
@@ -156,7 +157,7 @@ AGENT_ARGS=(run --background
     --title "$REF: $TITLE"
     --label "issue=$REF"
     --workspace "$WS_ID" --cwd "$WS_CWD"
-    --provider "$PROVIDER")
+    --provider "$PROVIDER" --thinking "$THINKING")
 
 llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo $(printf '%q ' "${AGENT_ARGS[@]}") $(printf '%q' "$PROMPT")"
 echo "==> Dispatched. Track with: taken"

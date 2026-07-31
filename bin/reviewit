@@ -18,13 +18,14 @@
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE="" BASE="origin/main" SHARE=0 PERSONA=""
+TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE="" BASE="origin/main" SHARE=0 PERSONA="" THINKING="${TAKE_THINKING:-xhigh}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --ws-title) WS_TITLE="$2"; shift ;;
         --base) BASE="$2"; shift ;;
         --share) SHARE=1 ;;
         --as) PERSONA="$2"; shift ;;
+        --thinking) THINKING="$2"; shift ;;
         --repo) REPO="$2"; shift ;;
         --repo=*) REPO="${1#--repo=}" ;;
         --provider) PROVIDER="$2"; shift ;;
@@ -120,5 +121,5 @@ IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation local \
 [ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
 
 echo "==> Dispatching review agent for $LABEL (workspace $WS_ID)"
-llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo run --background --provider $(printf '%q' "$PROVIDER") --title $(printf '%q' "review: $LABEL") --workspace $(printf '%q' "$WS_ID") --cwd $(printf '%q' "$WS_CWD") $(printf '%q' "$PROMPT")"
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo run --background --provider $(printf '%q' "$PROVIDER") --thinking $(printf '%q' "$THINKING") --title $(printf '%q' "review: $LABEL") --workspace $(printf '%q' "$WS_ID") --cwd $(printf '%q' "$WS_CWD") $(printf '%q' "$PROMPT")"
 echo "==> Dispatched. Track with: paseo ls / attach via the app"

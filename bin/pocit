@@ -12,11 +12,12 @@
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" WS_TITLE="" SHARE=0
+FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" WS_TITLE="" SHARE=0 THINKING="${TAKE_THINKING:-xhigh}"
 while [ $# -gt 0 ]; do
     case "$1" in
         --ws-title) WS_TITLE="$2"; shift ;;
         --share) SHARE=1 ;;
+        --thinking) THINKING="$2"; shift ;;
         --file) FILE="$2"; shift ;;
         --file=*) FILE="${1#--file=}" ;;
         --project) PROJECT="$2"; shift ;;
@@ -57,7 +58,7 @@ CONTEXT_FILE="work/poc-$SLUG/spec.md"
 printf '%s\n' "$SPEC" | llm_ssh "cat > ~/$CONTEXT_FILE"
 
 WS_TITLE="${WS_TITLE:-$(ws_title_from "poc $SLUG")}"
-AGENT_ARGS=(run --background --provider "$PROVIDER" --title "poc: $SLUG")
+AGENT_ARGS=(run --background --provider "$PROVIDER" --thinking "$THINKING" --title "poc: $SLUG")
 
 if [ -n "$PROJECT" ]; then
     # Fresh repo on the VM; agent works directly in it (nothing to isolate from)
