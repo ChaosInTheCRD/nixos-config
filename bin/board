@@ -3,12 +3,15 @@
 # Default: kanban-style view grouped into the board's status columns.
 #
 # usage: board [--unassigned] [--status <s>] [--label <l>] [--grep <pat>] [--limit N]
-#              [--flat] [--json]
+#              [--milestone <m>] [--no-epics] [--flat] [--json] [--raw]
 #        board show <issue-ref>     full issue: description + comments
 #   --unassigned   only items nobody is assigned to (the old default)
 #   --status       single column (e.g. --status "In Progress")
+#   --milestone    filter by milestone title (per-issue lookup; slower)
+#   --no-epics     drop Epic-type items
 #   --flat         old flat list (implies --status "Not Started" --unassigned
 #                  unless overridden)
+#   --raw          ignore BOARD_ARGS defaults from ~/.config/llm-vm/env
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
@@ -47,18 +50,27 @@ for c in d.get("comments") or []:
     exit 0
 fi
 
-STATUS="" ONLY_UNASSIGNED=0 LABEL="" GREP="" LIMIT=0 JSON=0 FLAT=0
+# BOARD_ARGS (from ~/.config/llm-vm/env) prepends personal default filters,
+# e.g. BOARD_ARGS="--label Refined --milestone 1.104.0 --no-epics" to mirror
+# a saved board view. --raw ignores it.
+for a in "$@"; do [ "$a" = "--raw" ] && BOARD_ARGS=""; done
+[ -n "${BOARD_ARGS:-}" ] && set -- $BOARD_ARGS "$@"
+
+STATUS="" ONLY_UNASSIGNED=0 LABEL="" GREP="" LIMIT=0 JSON=0 FLAT=0 MILESTONE="" NO_EPICS=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --all) ;;  # legacy no-op: kanban view shows assigned items already
+        --raw) ;;  # handled above
         --unassigned) ONLY_UNASSIGNED=1 ;;
         --status) STATUS="$2"; shift ;;
         --label) LABEL="$2"; shift ;;
         --grep) GREP="$2"; shift ;;
         --limit) LIMIT="$2"; shift ;;
+        --milestone) MILESTONE="$2"; shift ;;
+        --no-epics) NO_EPICS=1 ;;
         --flat) FLAT=1 ;;
         --json) JSON=1 ;;
-        -h|--help) sed -n '2,12p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,15p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "unknown flag: $1" >&2; exit 1 ;;
     esac
     shift
@@ -67,20 +79,24 @@ if [ "$FLAT" -eq 1 ] && [ -z "$STATUS" ]; then STATUS="Not Started"; ONLY_UNASSI
 
 maintner_query ListProjectItems "{\"owner\":\"tailscale\",\"project_number\":$BOARD_PROJECT}" \
 | STATUS="$STATUS" ONLY_UNASSIGNED="$ONLY_UNASSIGNED" LABEL="$LABEL" GREP="$GREP" \
-  LIMIT="$LIMIT" JSON="$JSON" FLAT="$FLAT" python3 -c '
-import json, os, re, sys
+  LIMIT="$LIMIT" JSON="$JSON" FLAT="$FLAT" MILESTONE="$MILESTONE" NO_EPICS="$NO_EPICS" \
+  MAINTNER_API="$MAINTNER_API" python3 -c '
+import json, os, re, sys, urllib.request
 
 items = json.load(sys.stdin)["items"]
 status, label, grep = os.environ["STATUS"], os.environ["LABEL"], os.environ["GREP"]
 only_unassigned = os.environ["ONLY_UNASSIGNED"] == "1"
 limit, as_json = int(os.environ["LIMIT"]), os.environ["JSON"] == "1"
 flat = os.environ["FLAT"] == "1"
+milestone, no_epics = os.environ["MILESTONE"], os.environ["NO_EPICS"] == "1"
 
 COLUMNS = ["Not Started", "In Progress", "In Review", "Done"]
 
 out = []
 for it in items:
     if it["is_pr"]:
+        continue
+    if no_epics and it.get("issue_type") == "Epic":
         continue
     if status:
         if it["status"] != status:
@@ -97,6 +113,29 @@ for it in items:
     out.append({"id": it["id"], "title": it["title"], "status": it["status"],
                 "labels": labels, "url": it["url"], "updated_at": it.get("updated_at", ""),
                 "assignees": [u.get("login","?") for u in it.get("assignees") or []]})
+
+# Milestone is not in the project-items payload; look it up per surviving
+# issue (concurrently). Filter-first keeps this to tens of requests, not
+# the whole board.
+if milestone:
+    from concurrent.futures import ThreadPoolExecutor
+
+    def issue_milestone(ref):
+        repo, num = ref.rsplit("#", 1)
+        body = json.dumps({"method": "GetIssue",
+                           "params": {"repo": repo, "number": int(num)}}).encode()
+        req = urllib.request.Request(os.environ["MAINTNER_API"], data=body,
+                                     headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=15) as r:
+                d = json.load(r)
+            return (d.get("milestone") or {}).get("title") or ""
+        except Exception:
+            return ""
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        ms = list(ex.map(issue_milestone, [i["id"] for i in out]))
+    out = [i for i, m in zip(out, ms) if m == milestone]
 
 out.sort(key=lambda i: i["id"])
 if limit:
