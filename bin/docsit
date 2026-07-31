@@ -96,6 +96,11 @@ Context, in reading order:
    and its commits: git -C ${FEATURE_REPO/#\~/~} log origin/main..$(printf '%q' "$BRANCH")
 3. This repo's own conventions: read CLAUDE.md here, look at how existing
    pages for similar features are written, and match them.
+4. The tailscale-style plugin is installed: use its enforcing-style skill
+   while writing (terminology, frontmatter, reference-link prefixes, voice),
+   and before your final commit run its style-enforcer agent over every
+   file you changed and fix ALL findings - CRITICAL and MAJOR are
+   non-negotiable, fix MINOR unless it conflicts with my expectations.
 $NOTES_BLOCK
 Ground rules:
 - Work autonomously start to finish - do NOT end your turn asking questions.
