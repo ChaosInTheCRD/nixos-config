@@ -131,7 +131,9 @@ Approach:
    NEVER commit notes/scratch files to the branch; commits must contain only
    changes that belong in an eventual PR.
 4. Only implement the fix if you are confident in it; write tests for any code
-   you change and run them.
+   you change and run them. Before writing Go in k8s code (k8s-operator,
+   containerboot, kube/), read ~/.claude_k8s_style.md and follow it — the
+   user reviews every line you write against it.
 5. Commit code changes to the branch with clear messages, and include this
    trailer line at the end of EVERY commit message so work can be traced even
    if branches are later renamed:

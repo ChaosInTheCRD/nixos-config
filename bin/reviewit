@@ -86,7 +86,10 @@ Ground rules:
   dig for it yourself (git log/blame, related issues via gh, surrounding code).
 - Judge: correctness (bugs, races, error handling, edge cases), security,
   API/design fit with the surrounding codebase, tests (missing/weak), and
-  clarity. Check the repo's conventions before flagging style.
+  clarity. Check the repo's conventions before flagging style. For k8s code
+  (k8s-operator, containerboot, kube/), ~/.claude_k8s_style.md is the
+  maintainers' style guide — review against it, especially its ranked list
+  of what reviewers flag.
 $DEPTH
 - Produce ~/reviews/$(printf '%s' "$LABEL" | tr '/#' '--').md: verdict summary
   up top, then findings ordered by severity, each with file:line, why it

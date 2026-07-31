@@ -209,6 +209,12 @@ record assumptions instead of stopping to ask questions — and the VM's
 `.claude_context.md` carries the `~/Git/<repo>` map so agents never stall on
 "where is the code".
 
+Agents writing or reviewing Go in tailscale k8s code follow
+`~/.claude_k8s_style.md` on the VM (source: private-dots
+`vm-files/claude_k8s_style.md`) — a style guide distilled from the
+maintainers' git history and real PR review comments, so agent code reads
+like the team wrote it. take/reviewit briefs point at it explicitly.
+
 ## Verification: docker, kind, shared clusters
 
 The VM runs a docker daemon (bootstrap installs docker.io; user is in the
