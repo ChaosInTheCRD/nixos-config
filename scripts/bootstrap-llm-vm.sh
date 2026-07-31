@@ -95,6 +95,24 @@ mkdir -p "$HOME/.local/bin"
 (cd "$CORP_DIR" && ./tool/go build -o "$HOME/.local/bin/gh" ./maintner/gh)
 (cd "$CORP_DIR" && ./tool/go build -o "$HOME/.local/bin/mn" ./maintner/mn)
 
+# --- claude plugins --------------------------------------------------------
+# i-have-adhd (github.com/ayghri/i-have-adhd) reshapes agent output: lead
+# with the next action, number steps, restate state, no preamble/closers.
+# Plugin state is runtime-managed by claude, so install via its CLI rather
+# than nix. The .i-have-adhd-always marker turns it on for every session.
+if command -v claude >/dev/null 2>&1; then
+    if ! grep -q '"i-have-adhd@i-have-adhd"' "$HOME/.claude/plugins/installed_plugins.json" 2>/dev/null; then
+        log "Installing i-have-adhd claude plugin"
+        claude plugin marketplace add ayghri/i-have-adhd
+        claude plugin install i-have-adhd@i-have-adhd
+    else
+        log "i-have-adhd plugin already installed"
+    fi
+    touch "$HOME/.claude/.i-have-adhd-always"
+else
+    log "WARN: claude not on PATH; skipping plugin install (re-run bootstrap after home-manager switch)"
+fi
+
 # --- verify ---------------------------------------------------------------
 log "Checking paseo daemon"
 systemctl --user is-active paseo.service >/dev/null 2>&1 || systemctl --user restart paseo.service
