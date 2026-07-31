@@ -22,7 +22,7 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-BOARD_ARGS=(--limit "$LIMIT" --json)
+BOARD_ARGS=(--status "Not Started" --unassigned --limit "$LIMIT" --json)
 [ -n "$LABEL" ] && BOARD_ARGS+=(--label "$LABEL")
 [ -n "$GREP" ] && BOARD_ARGS+=(--grep "$GREP")
 

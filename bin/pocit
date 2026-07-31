@@ -7,13 +7,16 @@
 #   --repo     build in an isolated worktree of an existing ~/Git/<repo>
 #   (neither)  defaults to --project <spec filename slug>
 #   --ws-title paseo workspace title (default: "poc <slug words>")
+#   --share    share Mac-side kube contexts with the VM first (fzf multi-select);
+#              the agent is briefed to use them
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" WS_TITLE=""
+FILE="" PROJECT="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" WS_TITLE="" SHARE=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --ws-title) WS_TITLE="$2"; shift ;;
+        --share) SHARE=1 ;;
         --file) FILE="$2"; shift ;;
         --file=*) FILE="${1#--file=}" ;;
         --project) PROJECT="$2"; shift ;;
@@ -35,6 +38,11 @@ case "$FILE" in
     *.docx|*.doc|*.rtf) SPEC=$(textutil -convert txt -stdout "$FILE") ;;
     *) SPEC=$(cat "$FILE") ;;
 esac
+
+CLUSTER_NOTE=""
+if [ "$SHARE" -eq 1 ]; then
+    share_clusters_note || exit 1
+fi
 
 slugify() { echo "$1" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'; }
 if [ -z "$PROJECT" ] && [ -z "$REPO" ]; then
@@ -68,7 +76,7 @@ fi
 AGENT_ARGS+=(--workspace "$WS_ID" --cwd "$WS_CWD")
 
 PROMPT="Build a proof of concept. The full spec is in ~/$CONTEXT_FILE — read it first.
-
+$CLUSTER_NOTE
 Ground rules:
 - Work autonomously start to finish. Do NOT end your turn with questions for
   me — when something is ambiguous, pick the most reasonable interpretation,

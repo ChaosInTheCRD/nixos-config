@@ -1,20 +1,27 @@
 #!/usr/bin/env bash
 # Spin up a dedicated code-review agent on the LLM VM for a PR or commit.
 #
-# usage: reviewit <pr-ref | commit-hash> [--repo <name>] [--provider <p>] [--quick]
-#                 [--ws-title <title>]
+# usage: reviewit <pr-ref | commit-hash | branch> [--repo <name>] [--provider <p>]
+#                 [--quick] [--base <ref>] [--ws-title <title>]
 #   reviewit corp#12345              review a PR (maintner-backed gh on the VM)
 #   reviewit tailscale/corp#12345
 #   reviewit abc1234 --repo corp     review a commit in ~/Git/corp on the VM
+#   reviewit chaosinthecrd/foo --repo tailscale
+#                                    review a branch on the VM (diff vs --base,
+#                                    default origin/main)
 #   --quick                          diff-read only (no building/testing), ~5min
 #   --ws-title                       paseo workspace title (default: "review <ref>")
+#   --share                          share Mac-side kube contexts with the VM first;
+#                                    the agent is briefed to verify against them
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE=""
+TARGET="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" QUICK=0 WS_TITLE="" BASE="origin/main" SHARE=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --ws-title) WS_TITLE="$2"; shift ;;
+        --base) BASE="$2"; shift ;;
+        --share) SHARE=1 ;;
         --repo) REPO="$2"; shift ;;
         --repo=*) REPO="${1#--repo=}" ;;
         --provider) PROVIDER="$2"; shift ;;
@@ -37,6 +44,18 @@ Get the full PR (description, comments, reviews) with: gh pr view $REPO#$NUM
 Get the diff with: gh pr diff $REPO#$NUM
 The corresponding repo checkout is ~/$VM_REPO — read surrounding code there
 for context (fetch the branch via origin if you need to build/test it)."
+elif [[ "$TARGET" == */* ]] || { [ -n "$REPO" ] && llm_ssh "git -C ~/Git/$(basename "$REPO") rev-parse --verify -q refs/heads/$(printf '%q' "$TARGET") >/dev/null" 2>/dev/null; }; then
+    [ -n "$REPO" ] || { echo "error: --repo is required when reviewing a branch" >&2; exit 1; }
+    VM_REPO="Git/$(basename "$REPO")"
+    llm_ssh "git -C ~/$VM_REPO rev-parse --verify -q refs/heads/$(printf '%q' "$TARGET") >/dev/null" \
+        || { echo "error: branch '$TARGET' not found in ~/$VM_REPO on the VM" >&2; exit 1; }
+    LABEL="$REPO@${TARGET##*/}"
+    SUBJECT="local branch $TARGET in ~/$VM_REPO (likely written by another agent —
+judge it as an eventual PR).
+See its changes with: git -C ~/$VM_REPO diff $(printf '%q' "$BASE")...$(printf '%q' "$TARGET")
+and its commits with: git -C ~/$VM_REPO log --oneline $(printf '%q' "$BASE")..$(printf '%q' "$TARGET")
+Also read ~/work/*/LOG.md if an entry references this branch — it carries the
+authoring agent's findings and assumptions. Read surrounding code for context."
 else
     [ -n "$REPO" ] || { echo "error: --repo is required when reviewing a commit hash" >&2; exit 1; }
     LABEL="$REPO@${TARGET:0:10}"
@@ -55,8 +74,13 @@ else
   speculating."
 fi
 
-PROMPT="You are doing a focused code review of $SUBJECT
+CLUSTER_NOTE=""
+if [ "$SHARE" -eq 1 ]; then
+    share_clusters_note || exit 1
+fi
 
+PROMPT="You are doing a focused code review of $SUBJECT
+$CLUSTER_NOTE
 Ground rules:
 - Work autonomously. Do NOT end with questions to me — if context is missing,
   dig for it yourself (git log/blame, related issues via gh, surrounding code).

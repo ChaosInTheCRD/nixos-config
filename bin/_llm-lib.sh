@@ -49,3 +49,17 @@ ws_title_from() { # $1=text
     printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -d "'" \
         | sed -E 's/[^a-z0-9]+/ /g; s/^ +//; s/ +$//' | cut -d' ' -f1-4
 }
+
+# Run kubeshare (fzf multi-select) and set CLUSTER_NOTE for agent prompts.
+# Usage: share_clusters_note || exit 1; then embed $CLUSTER_NOTE in the prompt.
+share_clusters_note() {
+    "$(dirname "${BASH_SOURCE[0]}")/kubeshare" || return 1
+    CLUSTER_NOTE="
+I have shared live Kubernetes clusters from my machine SPECIFICALLY for this
+task — I expect you to use them (verify against the real cluster, don't just
+reason from code). See them with:
+  kubectl --kubeconfig ~/.kube/shared-contexts.yaml config get-contexts
+and target one with '--context <name>'. Read/apply as the task needs, but
+never delete resources you didn't create. If the connection drops mid-task
+(the tunnel dies if my Mac sleeps), note it in the log and continue without."
+}

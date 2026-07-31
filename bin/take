@@ -83,12 +83,7 @@ fi
 # Optionally share Mac-side kube contexts with the VM first (fzf multi-select)
 CLUSTER_NOTE=""
 if [ "$SHARE" -eq 1 ]; then
-    "$(dirname "$0")/kubeshare" || exit 1
-    CLUSTER_NOTE="
-Kubernetes clusters have been shared from my machine: use
-'kubectl --kubeconfig ~/.kube/shared-contexts.yaml config get-contexts' to see
-them and '--context <name>' to target one. They are live clusters — read/apply
-as the task needs, but never delete resources you didn't create."
+    share_clusters_note || exit 1
 fi
 
 # Where the agent works on the VM (default: ~/Git/<repo-basename>)

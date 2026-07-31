@@ -79,15 +79,23 @@ current-context: $(echo "${CONTEXTS[0]}" | sed -E 's|.*/||; s/[^a-zA-Z0-9._-]/-/
 
 sleep 1  # let proxies bind before tunneling
 
+# A previous tunnel whose Mac side died (sleep, network drop) leaves a
+# VM-side session holding the forward ports; ExitOnForwardFailure then kills
+# every reconnect. The remote command carries a "kubeshare-tunnel" marker so
+# we can clear stale holders first ([l] so the pkill session doesn't match
+# itself).
+llm_ssh 'pkill -f "kubeshare-tunne[l]" 2>/dev/null; true'
+
 # --- ship kubeconfig + one background tunnel for all ports ---
 printf '%s\n' "$KUBECONFIG_VM" | llm_ssh 'cat > ~/.kube/shared-contexts.yaml'
 ssh -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
-    "${FORWARDS[@]}" "$LLM_VM" 'exec sleep infinity' >/dev/null 2>&1 &
+    "${FORWARDS[@]}" "$LLM_VM" 'exec -a kubeshare-tunnel /usr/bin/sleep infinity' >/dev/null 2>&1 &
 echo $! >> "$STATE_DIR/pids"
 
 sleep 2
 if ! kill -0 "$(tail -1 "$STATE_DIR/pids")" 2>/dev/null; then
-    echo "error: ssh tunnel failed (stale ports on the VM? try again in a minute)" >&2
+    echo "error: ssh tunnel failed. Ports may be held by a non-kubeshare" >&2
+    echo "process on the VM — check: ss -tlnp | grep -E ':81[0-9][0-9]'" >&2
     stop_all; exit 1
 fi
 

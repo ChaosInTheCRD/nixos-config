@@ -1,41 +1,92 @@
 #!/usr/bin/env bash
-# List issues on the Kubernetes & Containers project board (via maintner,
-# read-only, no GitHub auth). Default view: Not Started + unassigned.
+# Kubernetes & Containers project board (via maintner, read-only, no auth).
+# Default: kanban-style view grouped into the board's status columns.
 #
-# usage: board [--all] [--status <s>] [--label <l>] [--grep <pat>] [--limit N] [--json]
+# usage: board [--unassigned] [--status <s>] [--label <l>] [--grep <pat>] [--limit N]
+#              [--flat] [--json]
+#        board show <issue-ref>     full issue: description + comments
+#   --unassigned   only items nobody is assigned to (the old default)
+#   --status       single column (e.g. --status "In Progress")
+#   --flat         old flat list (implies --status "Not Started" --unassigned
+#                  unless overridden)
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-STATUS="Not Started" ONLY_UNASSIGNED=1 LABEL="" GREP="" LIMIT=0 JSON=0
+if [ "${1:-}" = "show" ]; then
+    [ -n "${2:-}" ] || { echo "usage: board show <issue-ref>" >&2; exit 1; }
+    parse_issue_ref "$2"
+    maintner_query GetIssue "{\"repo\":\"$REPO\",\"number\":$NUM,\"comments\":true}" \
+    | ISSUE_URL="https://github.com/$REPO/issues/$NUM" python3 -c '
+import json, os, sys, textwrap
+
+d = json.load(sys.stdin)
+
+def wrap(text, indent=""):
+    out = []
+    for line in (text or "").splitlines() or [""]:
+        out.extend(textwrap.wrap(line, 88, initial_indent=indent,
+                   subsequent_indent=indent) or [indent.rstrip()])
+    return "\n".join(out)
+
+labels = ", ".join(l["name"] for l in d.get("labels") or []) or "-"
+assignees = ", ".join(a["login"] for a in d.get("assignees") or []) or "unassigned"
+milestone = (d.get("milestone") or {}).get("title") or "-"
+state = d.get("state", "?")
+title, url = d["title"], d.get("url") or os.environ.get("ISSUE_URL", "")
+
+print(f"\033[1m{title}\033[0m")
+print(url)
+print(f"state: {state} | assigned: {assignees} | milestone: {milestone} | labels: {labels}")
+print("─" * 88)
+print(wrap(d.get("body")))
+for c in d.get("comments") or []:
+    author = c.get("author", {}).get("login", "?")
+    print(f"\n\033[1m── comment by {author} ──\033[0m")
+    print(wrap(c.get("body")))
+'
+    exit 0
+fi
+
+STATUS="" ONLY_UNASSIGNED=0 LABEL="" GREP="" LIMIT=0 JSON=0 FLAT=0
 while [ $# -gt 0 ]; do
     case "$1" in
-        --all) ONLY_UNASSIGNED=0 ;;
+        --all) ;;  # legacy no-op: kanban view shows assigned items already
+        --unassigned) ONLY_UNASSIGNED=1 ;;
         --status) STATUS="$2"; shift ;;
         --label) LABEL="$2"; shift ;;
         --grep) GREP="$2"; shift ;;
         --limit) LIMIT="$2"; shift ;;
+        --flat) FLAT=1 ;;
         --json) JSON=1 ;;
-        -h|--help) sed -n '2,6p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,12p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "unknown flag: $1" >&2; exit 1 ;;
     esac
     shift
 done
+if [ "$FLAT" -eq 1 ] && [ -z "$STATUS" ]; then STATUS="Not Started"; ONLY_UNASSIGNED=1; fi
 
 maintner_query ListProjectItems "{\"owner\":\"tailscale\",\"project_number\":$BOARD_PROJECT}" \
-| STATUS="$STATUS" ONLY_UNASSIGNED="$ONLY_UNASSIGNED" LABEL="$LABEL" GREP="$GREP" LIMIT="$LIMIT" JSON="$JSON" python3 -c '
+| STATUS="$STATUS" ONLY_UNASSIGNED="$ONLY_UNASSIGNED" LABEL="$LABEL" GREP="$GREP" \
+  LIMIT="$LIMIT" JSON="$JSON" FLAT="$FLAT" python3 -c '
 import json, os, re, sys
 
 items = json.load(sys.stdin)["items"]
 status, label, grep = os.environ["STATUS"], os.environ["LABEL"], os.environ["GREP"]
 only_unassigned = os.environ["ONLY_UNASSIGNED"] == "1"
 limit, as_json = int(os.environ["LIMIT"]), os.environ["JSON"] == "1"
+flat = os.environ["FLAT"] == "1"
+
+COLUMNS = ["Not Started", "In Progress", "In Review", "Done"]
 
 out = []
 for it in items:
     if it["is_pr"]:
         continue
-    if status and it["status"] != status:
-        continue
+    if status:
+        if it["status"] != status:
+            continue
+    elif it["status"] not in COLUMNS:
+        continue  # Meta / not-on-board
     if only_unassigned and it.get("assignees"):
         continue
     labels = [l["name"] for l in it.get("labels") or []]
@@ -44,7 +95,7 @@ for it in items:
     if grep and not re.search(grep, it["title"], re.I):
         continue
     out.append({"id": it["id"], "title": it["title"], "status": it["status"],
-                "labels": labels, "url": it["url"],
+                "labels": labels, "url": it["url"], "updated_at": it.get("updated_at", ""),
                 "assignees": [u.get("login","?") for u in it.get("assignees") or []]})
 
 out.sort(key=lambda i: i["id"])
@@ -53,10 +104,33 @@ if limit:
 
 if as_json:
     json.dump(out, sys.stdout, indent=2); print()
-else:
+    sys.exit(0)
+
+def line(i):
+    labs = ",".join(l for l in i["labels"] if l != "kubernetes") or "-"
+    who = " @" + ",".join(i["assignees"]) if i["assignees"] else ""
+    iid, ititle = i["id"], i["title"]
+    return f"  {iid:26} [{labs}]{who} {ititle[:64]}"
+
+if flat or status:
     for i in out:
-        labs = ",".join(l for l in i["labels"] if l not in ("kubernetes",)) or "-"
-        iid, ititle = i["id"], i["title"]
-        print(f"{iid:28} [{labs}] {ititle[:70]}")
+        print(line(i))
     print(f"\n{len(out)} issues", file=sys.stderr)
+    sys.exit(0)
+
+DONE_CAP = 8
+for col in COLUMNS:
+    ci = [i for i in out if i["status"] == col]
+    extra = ""
+    if col == "Done":
+        ci.sort(key=lambda i: i["updated_at"], reverse=True)
+        if len(ci) > DONE_CAP:
+            extra = f"  (showing {DONE_CAP} most recent)"
+        ci = ci[:DONE_CAP]
+    total = sum(1 for i in out if i["status"] == col)
+    print(f"\033[1m── {col} ({total}){extra} " + "─" * max(0, 50 - len(col)) + "\033[0m")
+    for i in ci:
+        print(line(i))
+    print()
+print(f"{len(out)} issues on the board (board show <ref> for details)", file=sys.stderr)
 '
