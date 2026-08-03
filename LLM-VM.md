@@ -193,6 +193,19 @@ title / slug / review ref; override with `--ws-title <title>` on any of
 the three. `reviewit` runs in a local (non-worktree) workspace on the
 repo checkout, as before — the title just separates it in the app.
 
+```bash
+task fix-kubeshare-timeout --repo corp   # ad-hoc work with no GitHub issue:
+task --repo tailscale --review-as bradfitz --test-with my-dev-cluster
+                                         # opens $EDITOR for instructions, then
+                                         # dispatches with the full take shape —
+                                         # work dir (expectations.md/LOG.md),
+                                         # worktree branch chaosinthecrd/<slug>,
+                                         # style guide, Task: <slug> trailer
+                                         # (work sync maps it like Issue:).
+                                         # Slug derives from your first line
+                                         # if not given.
+```
+
 Two more dispatchers with the same shape:
 
 ```bash

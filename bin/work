@@ -63,9 +63,9 @@ sync)
         ref=$(cat "$d/ref"); repo=$(cat "$d/repo")
         repo="${repo/#\~/$HOME}"
         [ -d "$repo/.git" ] || { echo "$(basename "$d"): repo $repo missing, skipped"; continue; }
-        shas=$(git -C "$repo" log --all --grep="Issue: $ref" --format=%H 2>/dev/null | head -50 || true)
+        shas=$(git -C "$repo" log --all --grep="Issue: $ref" --grep="Task: $ref" --format=%H 2>/dev/null | head -50 || true)
         if [ -z "$shas" ]; then
-            echo "$(basename "$d"): no commits carry 'Issue: $ref' yet"
+            echo "$(basename "$d"): no commits carry 'Issue: $ref' or 'Task: $ref' yet"
             continue
         fi
         branches=$(for s in $shas; do

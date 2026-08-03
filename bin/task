@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# Dispatch an ad-hoc task to a paseo agent on the LLM VM - same machinery as
+# take (shared work dir, worktree branch, style guide, work log) but for work
+# that has no GitHub issue yet. Opens $EDITOR for the task instructions.
+#
+# usage: task [slug] --repo <name> [--provider <p>] [--thinking <t>]
+#             [--ws-title <title>] [--review-as <persona>]
+#             [--test-with <kube-context>] [--share]
+#        task fix-kubeshare-timeout --repo corp
+#        task --repo tailscale --review-as bradfitz
+#   slug names the work dir (~/work/<slug>/) and branch (chaosinthecrd/<slug>);
+#   derived from the first line of your instructions if omitted.
+set -euo pipefail
+. "$(dirname "$0")/_llm-lib.sh"
+
+SLUG="" REPO="" PROVIDER="${TAKE_PROVIDER:-claude}" THINKING="${TAKE_THINKING:-xhigh}"
+WS_TITLE="" REVIEW_AS="" TEST_WITH="" SHARE=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --repo) REPO="$2"; shift ;;
+        --provider) PROVIDER="$2"; shift ;;
+        --thinking) THINKING="$2"; shift ;;
+        --ws-title) WS_TITLE="$2"; shift ;;
+        --review-as) REVIEW_AS="$2"; shift ;;
+        --test-with) TEST_WITH="$2"; shift ;;
+        --share) SHARE=1 ;;
+        -h|--help) sed -n '2,13p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) SLUG="$1" ;;
+    esac
+    shift
+done
+[ -n "$REPO" ] || { echo "usage: task [slug] --repo <name> (which repo should the agent work in?)" >&2; exit 1; }
+[ "$SHARE" -eq 1 ] && [ -n "$TEST_WITH" ] && { echo "error: --share and --test-with are mutually exclusive" >&2; exit 1; }
+
+if [ -n "$REVIEW_AS" ]; then
+    llm_ssh "[ -f ~/.claude_reviewer_$REVIEW_AS.md ]" \
+        || { echo "error: no persona file ~/.claude_reviewer_$REVIEW_AS.md on the VM" >&2; exit 1; }
+fi
+
+# Task instructions via $EDITOR (the whole point: no issue exists to fetch)
+NOTES="${NOTES:-}"
+if [ -z "$NOTES" ]; then
+    NOTES_FILE=$(mktemp /tmp/task-notes-XXXXXX.md)
+    cat <<'EOF' > "$NOTES_FILE"
+# Task instructions for the agent.
+#
+# What needs doing, why, and how you'll judge it done. Be as specific as
+# you'd be in take expectations. Lines starting with # are stripped.
+# Save with nothing else to CANCEL.
+EOF
+    ${EDITOR:-vim} "$NOTES_FILE"
+    NOTES=$(grep -v '^#' "$NOTES_FILE" | sed -e '/./,$!d' || true)
+    rm -f "$NOTES_FILE"
+fi
+[ -n "$NOTES" ] || { echo "==> No instructions written - cancelled."; exit 0; }
+
+if [ -z "$SLUG" ]; then
+    SLUG=$(printf '%s' "$NOTES" | head -1 | tr '[:upper:]' '[:lower:]' | tr -d "'" \
+        | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//' | cut -d- -f1-5 | cut -c1-48 | sed 's/-*$//')
+    [ -n "$SLUG" ] || { echo "error: couldn't derive a slug; pass one explicitly" >&2; exit 1; }
+fi
+
+VMHOME=$(llm_ssh 'echo "$HOME"')
+VM_REPO="Git/$(basename "$REPO")"
+BRANCH="chaosinthecrd/$SLUG"
+WORK_DIR="work/$SLUG"
+
+llm_ssh "mkdir -p ~/$WORK_DIR && [ -f ~/$WORK_DIR/LOG.md ] || echo '# Work log: $SLUG' > ~/$WORK_DIR/LOG.md; echo '$SLUG' > ~/$WORK_DIR/ref; echo '~/$VM_REPO' > ~/$WORK_DIR/repo"
+printf '%s\n' "$NOTES" | llm_ssh "cat > ~/$WORK_DIR/expectations.md"
+
+CLUSTER_NOTE=""
+if [ "$SHARE" -eq 1 ]; then
+    share_clusters_note || exit 1
+elif [ -n "$TEST_WITH" ]; then
+    share_clusters_note "$TEST_WITH" || exit 1
+    CLUSTER_NOTE="$CLUSTER_NOTE
+MANUAL TESTING IS PART OF THIS TASK: the '$TEST_WITH' cluster was shared
+specifically so you can run and manually verify your change against it.
+Deploy the changed component (ts-deploy for the operator; remember
+TAILSCALE_REPO=\$HOME/Git/tailscale and a ttl.sh registry for remote
+clusters), exercise the change end to end, and record in the log exactly
+what you ran and what you observed. A change that was never run is not
+done. If the tunnel drops (my Mac slept), log it and fall back to a kind
+cluster for whatever can still be verified there."
+fi
+
+REVIEW_BLOCK=""
+if [ -n "$REVIEW_AS" ]; then
+    REVIEW_BLOCK="4b. REVIEW GATE (only if you implemented code): after your implementation
+   commits, run a review-and-address cycle on your own diff:
+   - Read ~/.claude_reviewer_$REVIEW_AS.md and adversarially review the
+     full branch diff (git diff main...HEAD) AS that persona - its
+     priorities and severity register, applied honestly. Don't go easy on
+     yourself; the entire point is to catch what that reviewer would catch.
+   - Write the review to ~/$WORK_DIR/self-review-$REVIEW_AS.md (verdict,
+     findings ordered by severity, file:line).
+   - Address every hard-block and firm finding with follow-up commits.
+     Take-it-or-leave-it nits: use judgement, note what you skipped and
+     why in the review file. If a finding demands numbers (allocs,
+     benchmarks), produce them.
+   - IMPORTANT: fixes stay in MY style per ~/.claude_k8s_style.md - the
+     persona decides WHAT needs fixing, the style guide decides HOW the
+     fix reads. Do not let the persona's own idioms leak into the code.
+   - Then re-review the updated diff once. Stop after two cycles total -
+     log any still-open findings rather than looping.
+   - Log the outcome: work log $SLUG \"self-review as $REVIEW_AS: N
+     findings, M addressed, ...\"
+"
+fi
+
+PROMPT="You are working on an ad-hoc task (no GitHub issue yet): \"$SLUG\".
+
+Your shared work directory is ~/$WORK_DIR/ - read ALL of it first:
+expectations.md (my instructions - this IS the task), and LOG.md (running
+log from every agent that has worked on this task).
+$CLUSTER_NOTE
+Work autonomously start to finish - do NOT end your turn asking me questions.
+If something is ambiguous, pick the most reasonable interpretation, record it
+in the log, and keep going. Repos live at ~/Git/<repo>; clone missing ones
+via https://github.com/tailscale/<repo> (auth is handled).
+
+Approach:
+1. Read expectations.md and LOG.md carefully. Don't redo work the log shows
+   is already done - build on it.
+2. Record findings, decisions, assumptions, and dead ends by APPENDING to the
+   log as you go: work log $SLUG \"<what you found/did>\". Substantial
+   writeups can be separate files inside ~/$WORK_DIR/ - never inside the repo.
+   NEVER commit notes/scratch files to the branch; commits must contain only
+   changes that belong in an eventual PR.
+3. Write tests for any code you change and run them. Before writing Go in
+   k8s code (k8s-operator, containerboot, kube/), read ~/.claude_k8s_style.md
+   and follow it - the user reviews every line you write against it.
+4. Commit code changes to the branch with clear messages, and include this
+   trailer line at the end of EVERY commit message so work can be traced even
+   if branches are later renamed:
+     Task: $SLUG
+   Do NOT push anywhere.
+${REVIEW_BLOCK}5. Finish with a summary entry in the log (work log $SLUG \"...\").
+
+Useful here: 'gh' for GitHub data (read-only, maintner-backed, no auth
+needed); private tailscale repos clone via plain github.com URLs (rogitproxy)."
+
+WS_TITLE="${WS_TITLE:-$(ws_title_from "$SLUG")}"
+echo "==> Creating workspace \"$WS_TITLE\" (worktree branch $BRANCH in ~/$VM_REPO)"
+IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation worktree \
+    --path "$VMHOME/$VM_REPO" --title "$WS_TITLE" \
+    --mode branch-off --new-branch "$BRANCH" --worktree-slug "$SLUG")
+[ -n "$WS_ID" ] || { echo "error: workspace creation failed" >&2; exit 1; }
+
+echo "==> Dispatching agent on $LLM_VM (workspace $WS_ID)"
+AGENT_ARGS=(run --background
+    --title "task: $SLUG"
+    --label "task=$SLUG"
+    --workspace "$WS_ID" --cwd "$WS_CWD"
+    --provider "$PROVIDER" --thinking "$THINKING")
+llm_ssh "export PATH=\"\$HOME/.nix-profile/bin:\$PATH\"; paseo $(printf '%q ' "${AGENT_ARGS[@]}") $(printf '%q' "$PROMPT")"
+echo "==> Dispatched. Track with: taken / paseo ls. Review later: aif $BRANCH"
