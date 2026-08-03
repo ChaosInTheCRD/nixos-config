@@ -50,6 +50,13 @@ ws_title_from() { # $1=text
         | sed -E 's/[^a-z0-9]+/ /g; s/^ +//; s/ +$//' | cut -d' ' -f1-4
 }
 
+# VM-side context name for a Mac-side kube context, as kubeshare writes it
+# into ~/.kube/shared-contexts.yaml (path prefix stripped, odd chars to
+# dashes, 40 chars max). Keep in sync with kubeshare.
+ks_context_name() { # $1=mac-side context name
+    echo "$1" | sed -E 's|.*/||; s/[^a-zA-Z0-9._-]/-/g' | cut -c1-40
+}
+
 # Run kubeshare and set CLUSTER_NOTE for agent prompts. No args = fzf
 # multi-select; args = share those contexts directly.
 # Usage: share_clusters_note [ctx ...] || exit 1; embed $CLUSTER_NOTE in the prompt.

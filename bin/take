@@ -107,8 +107,10 @@ if [ "$SHARE" -eq 1 ]; then
     share_clusters_note || exit 1
 elif [ -n "$TEST_WITH" ]; then
     share_clusters_note "$TEST_WITH" || exit 1
+    TEST_CTX=$(ks_context_name "$TEST_WITH")
     CLUSTER_NOTE="$CLUSTER_NOTE
-MANUAL TESTING IS PART OF THIS TASK: the '$TEST_WITH' cluster was shared
+MANUAL TESTING IS PART OF THIS TASK: the '$TEST_CTX' context (in
+~/.kube/shared-contexts.yaml) was shared
 specifically so you can run and manually verify your change against it.
 Deploy the changed component (ts-deploy for the operator; remember
 TAILSCALE_REPO=\$HOME/Git/tailscale and a ttl.sh registry for remote
