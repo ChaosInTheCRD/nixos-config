@@ -3,11 +3,11 @@
 # take (shared work dir, worktree branch, style guide, work log) but for work
 # that has no GitHub issue yet. Opens $EDITOR for the task instructions.
 #
-# usage: task [slug] --repo <name> [--provider <p>] [--thinking <t>]
+# usage: taskit [slug] --repo <name> [--provider <p>] [--thinking <t>]
 #             [--ws-title <title>] [--review-as <persona>]
 #             [--test-with <kube-context>] [--share]
-#        task fix-kubeshare-timeout --repo corp
-#        task --repo tailscale --review-as bradfitz
+#        taskit fix-kubeshare-timeout --repo corp
+#        taskit --repo tailscale --review-as bradfitz
 #   slug names the work dir (~/work/<slug>/) and branch (chaosinthecrd/<slug>);
 #   derived from the first line of your instructions if omitted.
 set -euo pipefail
@@ -29,7 +29,7 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-[ -n "$REPO" ] || { echo "usage: task [slug] --repo <name> (which repo should the agent work in?)" >&2; exit 1; }
+[ -n "$REPO" ] || { echo "usage: taskit [slug] --repo <name> (which repo should the agent work in?)" >&2; exit 1; }
 [ "$SHARE" -eq 1 ] && [ -n "$TEST_WITH" ] && { echo "error: --share and --test-with are mutually exclusive" >&2; exit 1; }
 
 if [ -n "$REVIEW_AS" ]; then
