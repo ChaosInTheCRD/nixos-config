@@ -4,21 +4,32 @@
 # then starts a background agent in an isolated worktree on the VM.
 #
 # usage: take <issue-ref> [--repo-dir <vm-path>] [--provider <p>] [--no-notes]
-#                         [--ws-title <title>]
+#                         [--ws-title <title>] [--review-as <persona>]
+#                         [--test-with <kube-context>]
 #        take corp#45571
+#        take corp#45571 --review-as bradfitz --test-with my-dev-cluster
 #        NOTES="just investigate" take corp#45571 --no-notes
 # The paseo workspace title defaults to the first words of the issue title
 # ("authkey reissuance"); override with --ws-title.
+# --review-as: after implementing, the agent adversarially reviews its own
+#   diff AS the persona (~/.claude_reviewer_<p>.md on the VM) and addresses
+#   the findings before finishing. The code stays in YOUR style (the k8s
+#   style guide decides how fixes read); the persona decides what to fix.
+# --test-with: share the named Mac-side kube context with the VM (kubeshare
+#   <ctx>, no fzf) and make manually testing the change against it part of
+#   the task. Mutually exclusive with --share.
 set -euo pipefail
 . "$(dirname "$0")/_llm-lib.sh"
 
-REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0 WS_TITLE="" THINKING="${TAKE_THINKING:-xhigh}"
+REF="" REPO_DIR_OVERRIDE="" PROVIDER="${TAKE_PROVIDER:-claude}" NO_NOTES=0 SHARE=0 WS_TITLE="" THINKING="${TAKE_THINKING:-xhigh}" REVIEW_AS="" TEST_WITH=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --repo-dir) REPO_DIR_OVERRIDE="$2"; shift ;;
         --provider) PROVIDER="$2"; shift ;;
         --thinking) THINKING="$2"; shift ;;
         --ws-title) WS_TITLE="$2"; shift ;;
+        --review-as) REVIEW_AS="$2"; shift ;;
+        --test-with) TEST_WITH="$2"; shift ;;
         --no-notes) NO_NOTES=1 ;;
         --share) SHARE=1 ;;
         -h|--help) sed -n '2,8p' "$0" | sed 's/^# \?//'; exit 0 ;;
@@ -81,10 +92,30 @@ for c in d.get("comments") or []:
     fi
 fi
 
-# Optionally share Mac-side kube contexts with the VM first (fzf multi-select)
+[ "$SHARE" -eq 1 ] && [ -n "$TEST_WITH" ] && { echo "error: --share and --test-with are mutually exclusive" >&2; exit 1; }
+
+# Validate the persona file exists on the VM before dispatching anything
+if [ -n "$REVIEW_AS" ]; then
+    llm_ssh "[ -f ~/.claude_reviewer_$REVIEW_AS.md ]" \
+        || { echo "error: no persona file ~/.claude_reviewer_$REVIEW_AS.md on the VM" >&2; exit 1; }
+fi
+
+# Optionally share Mac-side kube contexts with the VM first (fzf multi-select,
+# or the named context for --test-with)
 CLUSTER_NOTE=""
 if [ "$SHARE" -eq 1 ]; then
     share_clusters_note || exit 1
+elif [ -n "$TEST_WITH" ]; then
+    share_clusters_note "$TEST_WITH" || exit 1
+    CLUSTER_NOTE="$CLUSTER_NOTE
+MANUAL TESTING IS PART OF THIS TASK: the '$TEST_WITH' cluster was shared
+specifically so you can run and manually verify your change against it.
+Deploy the changed component (ts-deploy for the operator; remember
+TAILSCALE_REPO=\$HOME/Git/tailscale and a ttl.sh registry for remote
+clusters), exercise the feature end to end, and record in the log exactly
+what you ran and what you observed. A change that was never run is not
+done. If the tunnel drops (my Mac slept), log it and fall back to a kind
+cluster for whatever can still be verified there."
 fi
 
 # Where the agent works on the VM (default: ~/Git/<repo-basename>)
@@ -106,6 +137,30 @@ echo "$ISSUE_JSON" | llm_ssh "cat > ~/$WORK_DIR/issue.json"
 NOTES_BLOCK=""
 if [ -n "$NOTES" ]; then
     NOTES_BLOCK=$(printf 'MY EXPECTATIONS (most important, follow these):\n%s\n' "$NOTES")
+fi
+
+REVIEW_BLOCK=""
+if [ -n "$REVIEW_AS" ]; then
+    REVIEW_BLOCK="5b. REVIEW GATE (only if you implemented code): after your implementation
+   commits, run a review-and-address cycle on your own diff:
+   - Read ~/.claude_reviewer_$REVIEW_AS.md and adversarially review the
+     full branch diff (git diff main...HEAD) AS that persona — its
+     priorities and severity register, applied honestly. Don't go easy on
+     yourself; the entire point is to catch what that reviewer would catch.
+   - Write the review to ~/$WORK_DIR/self-review-$REVIEW_AS.md (verdict,
+     findings ordered by severity, file:line).
+   - Address every hard-block and firm finding with follow-up commits.
+     Take-it-or-leave-it nits: use judgement, note what you skipped and
+     why in the review file. If a finding demands numbers (allocs,
+     benchmarks), produce them.
+   - IMPORTANT: fixes stay in MY style per ~/.claude_k8s_style.md — the
+     persona decides WHAT needs fixing, the style guide decides HOW the
+     fix reads. Do not let the persona's own idioms leak into the code.
+   - Then re-review the updated diff once. Stop after two cycles total —
+     log any still-open findings rather than looping.
+   - Log the outcome: work log $SLUG \"self-review as $REVIEW_AS: N
+     findings, M addressed, ...\"
+"
 fi
 
 PROMPT="You are working on GitHub issue $REPO#$NUM: \"$TITLE\".
@@ -140,7 +195,7 @@ Approach:
    if branches are later renamed:
      Issue: $REF
    Do NOT push anywhere.
-6. Finish with a summary entry in the log (work log $SLUG \"...\").
+${REVIEW_BLOCK}6. Finish with a summary entry in the log (work log $SLUG \"...\").
 
 Useful here: 'gh issue view $REPO#$NUM' and 'gh' generally (read-only, maintner-backed,
 no auth needed); private tailscale repos clone via plain github.com URLs (rogitproxy)."

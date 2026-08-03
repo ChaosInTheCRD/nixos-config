@@ -158,6 +158,17 @@ take corp#45571              # pull issue via maintner, open $EDITOR for your
                              # slugified from the issue title)
 take corp#45571 --provider codex   # default: claude (or set TAKE_PROVIDER)
 
+take corp#45571 --review-as bradfitz --test-with my-dev-cluster
+                             # --review-as: after implementing, the agent
+                             # adversarially reviews its own diff AS the
+                             # persona and addresses the findings (max two
+                             # cycles; review saved to the work dir). The
+                             # persona decides WHAT to fix; the k8s style
+                             # guide decides HOW fixes read.
+                             # --test-with: shares the named kube context
+                             # (no fzf) and makes deploying + manually
+                             # exercising the change part of the task.
+
 chop --label Refined --limit 5     # fan out investigation agents over board
                                    # issues (shows selection, confirms first;
                                    # skips issues that already have an agent)

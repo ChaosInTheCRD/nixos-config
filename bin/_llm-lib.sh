@@ -50,10 +50,11 @@ ws_title_from() { # $1=text
         | sed -E 's/[^a-z0-9]+/ /g; s/^ +//; s/ +$//' | cut -d' ' -f1-4
 }
 
-# Run kubeshare (fzf multi-select) and set CLUSTER_NOTE for agent prompts.
-# Usage: share_clusters_note || exit 1; then embed $CLUSTER_NOTE in the prompt.
+# Run kubeshare and set CLUSTER_NOTE for agent prompts. No args = fzf
+# multi-select; args = share those contexts directly.
+# Usage: share_clusters_note [ctx ...] || exit 1; embed $CLUSTER_NOTE in the prompt.
 share_clusters_note() {
-    "$(dirname "${BASH_SOURCE[0]}")/kubeshare" || return 1
+    "$(dirname "${BASH_SOURCE[0]}")/kubeshare" "$@" || return 1
     CLUSTER_NOTE="
 I have shared live Kubernetes clusters from my machine SPECIFICALLY for this
 task — I expect you to use them (verify against the real cluster, don't just
