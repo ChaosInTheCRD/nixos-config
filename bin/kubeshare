@@ -30,9 +30,27 @@ case "${1:-}" in
     -h|--help) sed -n '2,11p' "$0" | sed 's/^# \?//'; exit 0 ;;
 esac
 
+# Already active + explicit contexts: reshare with the union instead of
+# failing. Existing contexts keep their ports (union preserves map order),
+# though the proxies/tunnel restart, briefly breaking in-flight connections.
+# Interactive (fzf) mode still requires an explicit -d first.
+EXISTING_CONTEXTS=()
 if [ -d "$STATE_DIR" ]; then
-    echo "kubeshare already active:"; cat "$STATE_DIR/map"
-    echo "run 'kubeshare -d' first to reshare"; exit 1
+    if [ $# -eq 0 ]; then
+        echo "kubeshare already active:"; cat "$STATE_DIR/map"
+        echo "run 'kubeshare -d' first to reshare"; exit 1
+    fi
+    mapfile -t EXISTING_CONTEXTS < <(sed 's/ -> .*//' "$STATE_DIR/map")
+    NEW=()
+    for ctx in "$@"; do
+        printf '%s\n' "${EXISTING_CONTEXTS[@]}" | grep -qxF "$ctx" || NEW+=("$ctx")
+    done
+    if [ ${#NEW[@]} -eq 0 ]; then
+        echo "already shared:"; cat "$STATE_DIR/map"; exit 0
+    fi
+    echo "kubeshare active; adding: ${NEW[*]} (existing shares restart, same ports)"
+    set -- "${EXISTING_CONTEXTS[@]}" "${NEW[@]}"
+    stop_all
 fi
 
 # --- select contexts ---
