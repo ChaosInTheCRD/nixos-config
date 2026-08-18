@@ -113,10 +113,12 @@ let
       ok "no stale-node errors in recent control logs"
     fi
 
-    if id -nG | grep -qw docker; then
+    if docker ps >/dev/null 2>&1; then
+      ok "docker socket accessible"
+    elif id -nG | grep -qw docker; then
       ok "session has docker group"
     else
-      warn "session lacks docker group (lingering user session predates usermod; fixed by VM reboot) — wrap docker/kind/go-test in: sg docker -c '...'"
+      warn "docker socket not accessible — fix: sudo setfacl -m u:$USER:rw /var/run/docker.sock (or wrap in: sg docker -c '...')"
     fi
 
     clusters=$(kind get clusters 2>/dev/null || sg docker -c 'kind get clusters' 2>/dev/null)

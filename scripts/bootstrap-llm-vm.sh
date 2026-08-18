@@ -55,6 +55,16 @@ if ! id -nG "$USER" | grep -qw docker; then
     sudo usermod -aG docker "$USER"
     log "Added $USER to docker group (takes effect on next login)"
 fi
+# Group membership only lands in NEW login sessions, and this VM runs
+# lingering user sessions that never re-login — so also grant socket access
+# via ACL, reapplied by a drop-in every time docker (re)starts.
+command -v setfacl >/dev/null || sudo DEBIAN_FRONTEND=noninteractive apt-get install -y acl
+sudo mkdir -p /etc/systemd/system/docker.service.d
+printf '[Service]\nExecStartPost=/usr/bin/setfacl -m u:%s:rw /var/run/docker.sock\n' "$USER" \
+    | sudo tee /etc/systemd/system/docker.service.d/socket-acl.conf >/dev/null
+sudo systemctl daemon-reload
+sudo setfacl -m "u:$USER:rw" /var/run/docker.sock
+log "Docker socket ACL granted to $USER (survives docker restarts via drop-in)"
 
 # --- nixos-config repo ---------------------------------------------------
 # Lives at ~/Git/nixos-config to mirror the Mac's layout, so `aif` (which
