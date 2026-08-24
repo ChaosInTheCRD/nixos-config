@@ -137,6 +137,13 @@
     skhd = {
       enable = true;
       skhdConfig = ''
+        # Pass every key combo through untouched while the tailvisor VM is
+        # frontmost - alt/option combos are guest keystrokes there, not
+        # window-management hotkeys.
+        .blacklist [
+            "tailvisor"
+        ]
+
         shift + alt - r : sudo launchctl kickstart -k system/org.nixos.yabai-sa && launchctl kickstart -k gui/$(id -u)/org.nixos.skhd && brew services restart sketchybar
         shift + alt - y : launchctl kickstart -k gui/$(id -u)/org.nixos.yabai && sudo launchctl kickstart -k system/org.nixos.yabai-sa
 

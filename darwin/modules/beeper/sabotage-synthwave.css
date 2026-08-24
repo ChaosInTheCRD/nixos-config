@@ -1,0 +1,117 @@
+/* ============================================================
+   BEEPER 4.x — Theme: Sabotage (Synthwave accents)
+   Sabotage's neutral charcoal backdrop, with accents from the
+   ghostty/sketchybar Synthwave scheme: #D83F87 pink, #FF5FA8 bright.
+   Base theme: Sabotage — https://sabotage.nosso.top
+   Apply: Settings → Appearance → Custom CSS
+   ============================================================ */
+
+:root {
+  --t-bg:         #0D0E11;
+  --t-surface:    #15171F;
+  --t-raised:     #1E212B;
+  --t-hover:      #262A36;
+  --t-border:     #2C2F3A;
+  --t-accent:     #D83F87;
+  --t-accent2:    #B93372;
+  --t-my-bubble:  #2E1526;
+  --t-text:       #E8E8EA;
+  --t-muted:      #A8A9B0;
+  --t-dim:        #5A5B63;
+  --t-radius:     14px;
+  --t-radius-sm:  8px;
+
+  --chatview__backgroundcolor:               var(--t-bg);
+  --chatview__composer__borderradius:        var(--t-radius);
+  --chatview__composer__backgroundcolor:     var(--t-raised);
+  --chatview__message_tail__opacity:         0;
+  --chatview__message__backgroundcolor:      var(--t-raised);
+  --chatview__message__fontcolor:            var(--t-text);
+  --chatview__message__paddingleft:          12px;
+  --chatview__message__paddingright:         12px;
+  --chatview__message__paddingtop:           8px;
+  --chatview__message__paddingbottom:        8px;
+  --chatview__message__borderradius:         var(--t-radius);
+  --chatview__message_sharp__borderradius:   var(--t-radius);
+  --chatview__message_self__backgroundcolor: var(--t-my-bubble);
+  --chatview__readmarker__fontcolor:         var(--t-accent);
+}
+
+body, .home { background: var(--t-bg) !important; color: var(--t-text) !important; }
+
+.left { background: var(--t-surface) !important; border-right: 1px solid var(--t-border) !important; }
+.threads-list-container { background: var(--t-surface) !important; }
+.left-pane-header { background: var(--t-surface) !important; border-bottom: 1px solid var(--t-border) !important; }
+.bp_TitleBar { background-color: var(--t-bg) !important; border-bottom: 1px solid var(--t-border) !important; }
+.bp_MainPanel { background-color: var(--t-bg) !important; }
+.mx_RoomHeader { background-color: var(--t-bg) !important; }
+.mx_MatrixChat_wrapper--windows .bp_LeftPanel,
+.mx_MatrixChat_wrapper--linux .bp_LeftPanel,
+.bp_LeftPanel { background-color: var(--t-surface) !important; }
+.mx_HeaderButtons { display: none; }
+
+.CurrentAccount-module__accountDisplayName { color: var(--t-text) !important; font-weight: 500 !important; }
+
+.sidebar-button button { color: var(--t-muted) !important; }
+.sidebar-button.selected button, .sidebar-button:hover button { color: var(--t-accent) !important; }
+
+.AccountBadge-module__dot { background: var(--t-accent) !important; color: #ffffff !important; font-weight: 700 !important; }
+
+.tab-bar-btn button { color: var(--t-muted) !important; border-radius: var(--t-radius-sm) !important; }
+.tab-bar-btn button:hover { background: var(--t-hover) !important; color: #FF5FA8 !important; }
+
+.sidebar-thread { border-radius: var(--t-radius) !important; margin: 2px 8px !important; }
+.sidebar-thread:hover { background: var(--t-hover) !important; }
+.sidebar-thread.isSelected { background: var(--t-raised) !important; outline: 1px solid var(--t-border) !important; }
+.ThreadListItem-module__wrapper { background: transparent !important; padding: 10px 12px !important; }
+.ThreadListItem-module__title { color: var(--t-text) !important; font-size: 14px !important; font-weight: 500 !important; }
+.ThreadListItem-module__preview { color: var(--t-muted) !important; font-size: 13px !important; }
+.ThreadListItem-module__timestamp time { color: var(--t-dim) !important; font-size: 11px !important; }
+.ThreadListItem-module__unreadCount { background: var(--t-accent) !important; color: #ffffff !important; font-weight: 700 !important; border-radius: 999px !important; padding: 1px 6px !important; }
+.ThreadListItem-module__isUnread .ThreadListItem-module__title { color: #FF5FA8 !important; }
+.PinnedThreadListItem-module__wrapper { background: transparent !important; }
+.PinnedThreadListItem-module__title { color: var(--t-text) !important; font-size: 12px !important; }
+
+.right-wrapper, .right-pane-header, .pane-container { background: var(--t-bg) !important; }
+.right-pane-header { border-bottom: 1px solid var(--t-border) !important; }
+.thread-title-top span { color: var(--t-text) !important; font-weight: 500 !important; }
+.thread-header-right-buttons button { color: var(--t-muted) !important; }
+.thread-header-right-buttons button:hover { color: var(--t-accent) !important; }
+
+.messages-list-wrapper { background: var(--t-bg) !important; }
+.message-container.is-sender .message-contents { background: var(--t-my-bubble) !important; border: 1px solid #4A2440 !important; border-radius: var(--t-radius) !important; padding: 8px 12px !important; }
+.message-container.is-sender .message-text { color: var(--t-text) !important; line-height: 1.5 !important; }
+.message-container:not(.is-sender) .message-contents { background: var(--t-raised) !important; border: 1px solid var(--t-border) !important; border-radius: var(--t-radius) !important; padding: 8px 12px !important; }
+.message-container:not(.is-sender) .message-text { color: var(--t-text) !important; line-height: 1.5 !important; }
+
+.MessageReadableMetadata-module__readableMetadata { color: var(--t-dim) !important; font-size: 11px !important; }
+.ThreadListReadIcon-module__threadReadIcon { color: var(--t-accent) !important; }
+.linked-message { border-left: 2px solid var(--t-accent) !important; background: var(--t-hover) !important; border-radius: 0 var(--t-radius-sm) var(--t-radius-sm) 0 !important; padding: 4px 8px !important; }
+.date { background: var(--t-raised) !important; border: 1px solid var(--t-border) !important; color: var(--t-dim) !important; border-radius: 999px !important; padding: 3px 12px !important; font-size: 11px !important; }
+.unread-divider { color: var(--t-accent) !important; font-size: 11px !important; font-weight: 600 !important; }
+
+.compose-message-container { background: var(--t-surface) !important; padding: 8px 12px !important; }
+.ComposeMessage-module__wrapper { background: var(--t-raised) !important; border: 1px solid var(--t-border) !important; border-radius: var(--t-radius) !important; }
+.ComposeMessage-module__wrapper:focus-within { border-color: var(--t-accent) !important; }
+.mx_MessageComposer_wrapper { border: 1px solid var(--t-border) !important; }
+.tiptap.ProseMirror { color: var(--t-text) !important; caret-color: var(--t-accent) !important; }
+.tiptap.ProseMirror p.is-editor-empty::before { color: var(--t-dim) !important; }
+.ComposeMessage-module__textAreaButtons button, .ComposeMessage-module__row button { color: var(--t-muted) !important; border-radius: var(--t-radius-sm) !important; }
+.ComposeMessage-module__textAreaButtons button:hover, .ComposeMessage-module__row button:hover { color: var(--t-accent) !important; background: var(--t-hover) !important; }
+.BrandSendButton-module__container { background: var(--t-accent) !important; color: #ffffff !important; border-radius: var(--t-radius-sm) !important; }
+.BrandSendButton-module__container:disabled { background: var(--t-raised) !important; color: var(--t-dim) !important; }
+.BrandSendButton-module__container:not(:disabled):hover { background: var(--t-accent2) !important; }
+
+.mx_ContextualMenu { background-color: var(--t-raised) !important; }
+.mx_IconizedContextMenu .mx_IconizedContextMenu_optionList .mx_AccessibleButton:hover { background-color: var(--t-hover) !important; }
+.mx_Dialog { background-color: var(--t-raised) !important; color: var(--t-text) !important; }
+.ChatNetworksDialog-leftbar, .ChatNetworksDialog-content { background-color: var(--t-raised) !important; }
+.mx_JumpToBottomButton .mx_JumpToBottomButton_scrollDown { background-color: var(--t-raised) !important; border: 1px solid var(--t-border) !important; }
+.mx_JumpToBottomButton .mx_JumpToBottomButton_scrollDown:hover { background-color: var(--t-hover) !important; }
+.AppControls-minimize:hover, .AppControls-maximize:hover, .AppControls-unmaximize:hover { background-color: var(--t-hover) !important; }
+.AppControls-minimize:hover svg, .AppControls-maximize:hover svg, .AppControls-unmaximize:hover svg { fill: var(--t-accent) !important; }
+
+* { scrollbar-width: thin; scrollbar-color: var(--t-border) transparent; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-thumb { background: var(--t-border); border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
