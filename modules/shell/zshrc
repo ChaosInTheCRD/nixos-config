@@ -76,6 +76,7 @@ start_agent() {
   command -v ssh-agent >/dev/null 2>&1 || return
 
   echo "Initializing new SSH agent..."
+  mkdir -p -m 700 "$(dirname "$SSH_ENV")"
   ssh-agent -s > "$SSH_ENV"
   chmod 600 "$SSH_ENV"
   . "$SSH_ENV" > /dev/null
