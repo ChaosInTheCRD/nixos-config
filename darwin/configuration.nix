@@ -142,6 +142,7 @@
         # window-management hotkeys.
         .blacklist [
             "tailvisor"
+            "Tailvisor"
         ]
 
         shift + alt - r : sudo launchctl kickstart -k system/org.nixos.yabai-sa && launchctl kickstart -k gui/$(id -u)/org.nixos.skhd && brew services restart sketchybar
