@@ -136,5 +136,16 @@
         lib = pkgs.lib;
       };
 
+      # macOS guest under tailvisor: claude/agent work happens here, not on
+      # the physical macbook. No WM, minimal casks (machines/
+      # macbook-tailvisor-macos.nix sets tailvisor.guest = true).
+      # Build: make switch NIXNAME=macbook-tailvisor-macos
+      darwinConfigurations.macbook-tailvisor-macos = mkDarwin "macbook-tailvisor-macos" rec {
+        inherit darwin home-manager user;
+        system = "aarch64-darwin";
+        pkgs = import nixpkgs { inherit system; };
+        lib = pkgs.lib;
+      };
+
     };
 }

@@ -7,8 +7,21 @@
 #       └─ ./configuration.nix *
 #
 
-{ config, pkgs, user, system, ... }:
+{ config, pkgs, lib, user, system, ... }:
+let
+  # true when building a tailvisor macOS guest (machines/*.nix sets it):
+  # skip window management (yabai/skhd/sketchybar) and the brews/casks that
+  # only make sense on physical hardware.
+  isGuest = config.tailvisor.guest;
+in
 {
+  options.tailvisor.guest = lib.mkOption {
+    type = lib.types.bool;
+    default = false;
+    description = "Building for a tailvisor macOS guest VM.";
+  };
+
+  config = {
   security.pam.services.sudo_local.touchIdAuth = true;
 
   users.users."${user}" = {               # macOS user
@@ -30,13 +43,13 @@
       upgrade = false;
       cleanup = "zap";                    # Uninstall not listed packages and casks
     };
-    taps = [
+    taps = lib.optionals (!isGuest) [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
       "koekeishiya/formulae"
       "theseal/ssh-askpass"
     ];
-    brews = [
+    brews = lib.optionals (!isGuest) [
       "FelixKratz/formulae/sketchybar"
       "theseal/ssh-askpass/ssh-askpass"
       "ddcctl"
@@ -53,7 +66,7 @@
       "mosh"
       "flyctl"
     ];
-    casks = [
+    casks = lib.optionals (!isGuest) [
       "firefox"
       "akiflow"
       "corelocationcli"
@@ -90,12 +103,15 @@
       "microsoft-teams"
       "sf-symbols"
       "hiddenbar"
+    ] ++ lib.optionals isGuest [
+      "firefox"
+      "ghostty"
     ];
   };
 
   services = {
     yabai = {                             # Tiling window manager
-      enable = true;
+      enable = !isGuest;
       enableScriptingAddition = true;     # Loads SA on startup & sets up sudoers
       config = {                          # Other configuration options
         layout = "bsp";
@@ -135,7 +151,7 @@
       '';                                 # Specific rules for what is managed and layered.
     };
     skhd = {
-      enable = true;
+      enable = !isGuest;
       skhdConfig = ''
         # Pass every key combo through untouched while the tailvisor VM is
         # frontmost - alt/option combos are guest keystrokes there, not
@@ -239,7 +255,7 @@
       '';                                 # Hotkey config
     };
     jankyborders = {
-      enable = true;
+      enable = !isGuest;
       active_color = "0xffAFDCA4";
       inactive_color = "0xffaaaaaa";
       hidpi = true;
@@ -290,8 +306,9 @@
     activationScripts.postActivation.text = ''
       sudo chsh -s ${pkgs.zsh}/bin/zsh
       # Reload yabai scripting addition after rebuild
-      sudo /run/current-system/sw/bin/yabai --load-sa 2>/dev/null || true
+      ${lib.optionalString (!isGuest) "sudo /run/current-system/sw/bin/yabai --load-sa 2>/dev/null || true"}
     ''; # Since it's not possible to declare default shell, run this command after build
     stateVersion = 5;
+  };
   };
 }
