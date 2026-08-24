@@ -144,6 +144,10 @@
 
         shift + alt - f : firefox
 
+        # Jump to the tailvisor VM window (fullscreen space included); falls
+        # back to app activation if no window matches the query.
+        ctrl - t : yabai -m query --windows | /etc/profiles/per-user/chaosinthecrd/bin/jq -re '[.[] | select(.app | test("tailvisor"; "i"))][0].id' | xargs -I{} yabai -m window --focus {} || open -a Tailvisor
+
         alt - h : yabai -m window --focus west
         alt - j : yabai -m window --focus south
         alt - k : yabai -m window --focus north
