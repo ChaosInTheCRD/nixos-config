@@ -87,7 +87,6 @@ in
       "slack"
       "spotify"
       "claude-code"
-      "paseo"
       "notion"
       "raycast"
       "transmission"
@@ -107,6 +106,8 @@ in
       "microsoft-teams"
       "sf-symbols"
       "hiddenbar"
+    ] ++ lib.optionals isGuest [
+      "paseo"                             # paseo app runs in the VM only, not the host
     ];
   };
 
