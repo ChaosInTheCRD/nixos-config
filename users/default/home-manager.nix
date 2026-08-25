@@ -16,6 +16,7 @@ in {
         ../../darwin/modules/ghostty/ghostty.nix
         ] ++ (lib.optionals pkgs.stdenv.isDarwin [
         ../../modules/ios-deploy
+        ../../darwin/modules/claude/claude.nix
         ../../darwin/modules/clipboard-sync.nix
         ../../darwin/modules/sketchybar/sketchybar.nix
         ../../darwin/modules/yabai/yabai.nix
