@@ -139,6 +139,11 @@ in
         window_border_width = 5;
       };
       extraConfig = ''
+        # Hands off the tailvisor VM window: tiling a borderless
+        # screen-sized window breaks its notch-covering fullscreen (and the
+        # active-window border paints over the guest).
+        yabai -m rule --add app='^[Tt]ailvisor$' manage=off
+
         yabai -m rule --add app='^Emacs$' manage=on
         yabai -m rule --add title='Preferences' manage=off layer=above
         yabai -m rule --add title='NordPass Password Manager' manage=off layer=above
