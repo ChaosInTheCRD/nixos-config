@@ -40,6 +40,15 @@ in
         NODE_ENV = "production";
         PASEO_HOME = "${homeDir}/.paseo";
         PATH = paseoPath;
+        # Bind + host-allowlist via env, not config.json: the paseo *cask*
+        # (a newer version) keeps rewriting ~/.paseo/config.json in its own
+        # format, which drops these. paseo merges PASEO_LISTEN / PASEO_HOSTNAMES
+        # on top of config.json, so the env wins regardless. 0.0.0.0 is required
+        # because the hypervisor's inbound proxy dials the guest's virtio IP;
+        # the *.ts.net allowlist lets the tailnet MagicDNS Host header through
+        # paseo's DNS-rebinding guard.
+        PASEO_LISTEN = "0.0.0.0:6767";
+        PASEO_HOSTNAMES = "tailvisor.tail7373cb.ts.net,*.ts.net";
       };
       RunAtLoad = true;
       # launchd analog of systemd Restart=on-failure: relaunch unless it exited 0.

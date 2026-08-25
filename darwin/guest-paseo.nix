@@ -21,6 +21,27 @@
 #
 { config, lib, pkgs, user, ... }:
 
+let
+  # Raw NAT-PMP TCP port-mapping request (6767 -> 6767, TTL 3600s). natpmpc is
+  # unusable against tailvisor: it queries the "public IP" first, rejects the
+  # tailnet CGNAT (100.64/10) address as invalid, and exits with code 1 before
+  # it ever sends the mapping. This sends only the mapping request, which the
+  # gateway honours (verified: result=0, ext=6767).
+  publishPy = pkgs.writeText "paseo-natpmp-publish.py" ''
+    import socket, struct, sys
+    req = struct.pack(">BBHHHI", 0, 2, 0, 6767, 6767, 3600)
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); s.settimeout(3)
+    try:
+        s.sendto(req, ("192.168.72.1", 5351))
+        data, _ = s.recvfrom(64)
+        _, op, result, _, intp, extp, life = struct.unpack(">BBHIHHI", data[:16])
+        print("paseo natpmp: result=%d ext=%d int=%d ttl=%d" % (result, extp, intp, life))
+        sys.exit(0 if result == 0 else 1)
+    except Exception as e:
+        print("paseo natpmp failed:", e); sys.exit(1)
+  '';
+in
+
 {
   config = lib.mkIf config.tailvisor.guest {
 
@@ -54,16 +75,12 @@
       fi
     '';
 
-    # Keep port 6767 published to the tailnet via NAT-PMP against the
-    # virtual gateway. RunAtLoad + StartInterval re-request well inside the
-    # 3600s TTL; requests are idempotent (renewals per RFC 6886).
+    # Keep port 6767 published to the tailnet via NAT-PMP against the virtual
+    # gateway. RunAtLoad + StartInterval re-request well inside the 3600s TTL;
+    # NAT-PMP renewals are idempotent (RFC 6886).
     launchd.user.agents.paseo-publish = {
       serviceConfig = {
-        ProgramArguments = [
-          "${pkgs.libnatpmp}/bin/natpmpc"
-          "-a" "6767" "6767" "tcp" "3600"
-          "-g" "192.168.72.1"
-        ];
+        ProgramArguments = [ "${pkgs.python3}/bin/python3" "${publishPy}" ];
         RunAtLoad = true;
         StartInterval = 1500; # 25min; TTL is 60min
         StandardOutPath = "/Users/${user}/.paseo/publish.log";
