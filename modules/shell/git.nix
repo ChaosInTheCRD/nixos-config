@@ -8,7 +8,7 @@
 # is always present here).
 #
 
-{ osConfig, ... }:
+{ osConfig, pkgs, ... }:
 
 let
   isGuest = osConfig.tailvisor.guest or false;
@@ -27,6 +27,10 @@ in
       # on GitHub as a signing key to get the Verified badge.
       gpg = { format = "ssh"; };
       user = { signingkey = "~/.ssh/id_ed25519.pub"; };
+      # Push over HTTPS via the gh token instead of the ssh-askpass GUI (the
+      # `gh auth setup-git` equivalent, done declaratively since ~/.config/git
+      # is read-only under home-manager). gh must be signed in.
+      credential."https://github.com".helper = "!${pkgs.gh}/bin/gh auth git-credential";
     } else {
       gpg = { format = "openpgp"; };
       user = { signingkey = "84B6049F3398724F3300230C9A98F924E51C73A8"; };
