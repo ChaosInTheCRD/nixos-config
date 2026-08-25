@@ -11,6 +11,7 @@ darwin.lib.darwinSystem {
     ../machines/shared.nix
     ../darwin/configuration.nix
     ../darwin/guest-wm.nix           # no-op on host (self-gated on tailvisor.guest)
+    ../darwin/guest-paseo.nix        # no-op on host (self-gated on tailvisor.guest)
 
     { 
       documentation.enable = false; 
