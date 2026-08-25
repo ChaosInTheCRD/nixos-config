@@ -6,6 +6,23 @@
 source "$HOME/.config/sketchybar/colorpresets/custom-theme.sh"
 source "$HOME/.config/sketchybar/icons.sh"
 
+# --- Tailvisor VM marker -------------------------------------------------
+# Inside the guest, tint the widget islands a calm leafy teal (the bar itself
+# stays transparent, so it doesn't stretch a solid strip across the screen).
+# The host matches no case here and keeps its synthwave theme untouched.
+case "$(hostname)" in
+  *tailvisor*)
+    export TEAL=0xff8bd5ca
+    export LEAF=0xffa6da95
+    export DEEP_TEAL=0xff0f2b28
+    export ITEM_COLOR=$DEEP_TEAL       # widget-island backgrounds
+    export ICON_COLOR=$TEAL
+    export LABEL_COLOR=0xffcad3f5
+    export SPACE_SELECTED=$LEAF
+    export POPUP_BORDER_COLOR=$TEAL
+    ;;
+esac
+
 
 
 # Directories for items and plugins
@@ -172,6 +189,35 @@ sketchybar --add item audio right \
 sketchybar --add bracket right_bracket rain_chart clock ip_address battery audio \
            --set right_bracket background.color=$ITEM_COLOR \
                                background.corner_radius=8
+
+# --- Tailvisor VM customization (guest only) -----------------------------
+# Slim the bar for the VM: drop the host-only widgets and fold a teal "VM"
+# marker into the left widget island so the desktop is unmistakable.
+case "$(hostname)" in
+  *tailvisor*)
+    # Teal "VM" marker, moved to the front of the left island.
+    sketchybar --add item vm_badge left \
+               --set vm_badge label="VM" \
+                              label.color=0xff06120f \
+                              label.font="Iosevka Nerd Font:Heavy:15.0" \
+                              icon.drawing=off \
+                              background.color=$TEAL \
+                              background.corner_radius=6 \
+                              background.height=22 \
+               --move vm_badge before home
+
+    # Remove widgets that don't belong in the VM.
+    sketchybar --remove tailscale \
+               --remove audio \
+               --remove rain_chart
+
+    # Rebuild the left island so its background wraps the VM marker too.
+    sketchybar --remove left_bracket \
+               --add bracket left_bracket vm_badge home front_app days_until network kube \
+               --set left_bracket background.color=$ITEM_COLOR \
+                                  background.corner_radius=8
+    ;;
+esac
 
 # --- Notch Gaps ---
 # We add invisible gap items to push the left and right brackets away from the notch.

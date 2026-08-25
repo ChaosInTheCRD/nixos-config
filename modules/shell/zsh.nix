@@ -1,9 +1,13 @@
 # taken from https://github.com/aywrite/nix-config
-{ config, pkgs, ... }:
+{ config, pkgs, lib, osConfig ? null, ... }:
 let
   # stuffing the gitignore stuff in here as well
   nixConfigDir = "${config.home.homeDirectory}/Git/nixos-config";
   inherit (config.lib.file) mkOutOfStoreSymlink;
+
+  # Only the tailvisor guest reaches the host-clipboard bridge (osConfig is the
+  # nix-darwin system config; absent for standalone/server home-manager).
+  isGuest = if osConfig == null then false else (osConfig.tailvisor.guest or false);
 
   # this idea is from https://github.com/BrianHicks/dotfiles.nix/blob/master/dotfiles/zsh.nix
   extras = [
@@ -25,6 +29,11 @@ in
     history.size = 10000;
     shellAliases = {
       cls = "clear";
+    } // lib.optionalAttrs isGuest {
+      # tailvisor host clipboard bridge (hypervisor exposes the host Mac's
+      # clipboard at 192.168.72.1:9550 over the guest-only virtual link).
+      hpaste = "curl -s http://192.168.72.1:9550/clipboard | pbcopy";                     # host -> guest
+      hcopy = "pbpaste | curl -s --data-binary @- http://192.168.72.1:9550/clipboard";    # guest -> host
     };
 
     oh-my-zsh = {                               # Extra plugins for zsh

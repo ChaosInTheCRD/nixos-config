@@ -43,13 +43,16 @@ in
       upgrade = false;
       cleanup = "zap";                    # Uninstall not listed packages and casks
     };
-    taps = lib.optionals (!isGuest) [
+    # Guest gets the SAME Homebrew set as the host (cleanup = "zap" removes
+    # anything undeclared, so the guest must declare everything it needs).
+    taps = [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
       "koekeishiya/formulae"
       "theseal/ssh-askpass"
     ];
-    brews = lib.optionals (!isGuest) [
+    brews = [
+      "pipx"                              # ios-deploy: pymobiledevice3 venv (host runs tunneld, guest drives) — see modules/ios-deploy
       "FelixKratz/formulae/sketchybar"
       "theseal/ssh-askpass/ssh-askpass"
       "ddcctl"
@@ -66,7 +69,7 @@ in
       "mosh"
       "flyctl"
     ];
-    casks = lib.optionals (!isGuest) [
+    casks = [
       "firefox"
       "akiflow"
       "corelocationcli"
@@ -84,6 +87,7 @@ in
       "slack"
       "spotify"
       "claude-code"
+      "paseo"
       "notion"
       "raycast"
       "transmission"
@@ -103,15 +107,15 @@ in
       "microsoft-teams"
       "sf-symbols"
       "hiddenbar"
-    ] ++ lib.optionals isGuest [
-      "firefox"
-      "ghostty"
     ];
   };
 
-  services = {
+  # Host-only window management. The guest gets its own yabai + skhd on a
+  # cmd+ctrl prefix instead (darwin/guest-wm.nix) — defining these here too
+  # would collide with that module on a guest build, so gate the whole block.
+  services = lib.mkIf (!isGuest) {
     yabai = {                             # Tiling window manager
-      enable = !isGuest;
+      enable = true;
       enableScriptingAddition = true;     # Loads SA on startup & sets up sudoers
       config = {                          # Other configuration options
         layout = "bsp";
@@ -156,7 +160,7 @@ in
       '';                                 # Specific rules for what is managed and layered.
     };
     skhd = {
-      enable = !isGuest;
+      enable = true;
       skhdConfig = ''
         # Pass every key combo through untouched while the tailvisor VM is
         # frontmost - alt/option combos are guest keystrokes there, not
@@ -260,7 +264,7 @@ in
       '';                                 # Hotkey config
     };
     jankyborders = {
-      enable = !isGuest;
+      enable = true;
       active_color = "0xffAFDCA4";
       inactive_color = "0xffaaaaaa";
       hidpi = true;
@@ -289,7 +293,8 @@ in
         dashboard-in-overlay = true;
         expose-animation-duration = 0.0;
         launchanim = false;
-        orientation = "left";
+        orientation = if isGuest then "right" else "left";   # right dock marks the VM
+
         showhidden = true;
         mru-spaces = false;
         show-recents = false;

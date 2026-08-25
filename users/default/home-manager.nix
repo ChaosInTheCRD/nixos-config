@@ -1,4 +1,4 @@
-{ lib, pkgs, ... }:
+{ lib, pkgs, paseoPackage ? null, ... }:
 
 let
   isDarwin = pkgs.stdenv.isDarwin;
@@ -15,11 +15,15 @@ in {
         ../../darwin/modules/kitty/kitty.nix
         ../../darwin/modules/ghostty/ghostty.nix
         ] ++ (lib.optionals pkgs.stdenv.isDarwin [
+        ../../modules/ios-deploy
+        ../../darwin/modules/clipboard-sync.nix
         ../../darwin/modules/sketchybar/sketchybar.nix
         ../../darwin/modules/yabai/yabai.nix
         ../../darwin/modules/skhd/skhd.nix
         ../../darwin/modules/syncthing/syncthing.nix
         ../../pkgs/macos.nix
+        ]) ++ (lib.optionals (paseoPackage != null && pkgs.stdenv.isDarwin) [
+        (import ../../modules/paseo-darwin.nix { inherit paseoPackage; })
         ]) ++ (lib.optionals pkgs.stdenv.isLinux [
         ../../modules/desktop/hyprland/home.nix
         ../../pkgs/nixos.nix

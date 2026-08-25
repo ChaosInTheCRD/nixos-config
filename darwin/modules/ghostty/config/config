@@ -67,6 +67,11 @@ palette = 17=#D83F87
 # Lavender accent
 palette = 18=#E98074
 
+# Optional VM-only override (present only on the tailvisor guest, written by
+# darwin/modules/ghostty/ghostty.nix). The leading '?' makes ghostty silently
+# ignore it on the host, where the file does not exist.
+config-file = ?/Users/chaosinthecrd/.config/ghostty-vm
+
 # Performance
 shell-integration = detect
 shell-integration-features = no-cursor

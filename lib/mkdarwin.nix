@@ -1,5 +1,5 @@
 # This function creates a nix-darwin system.
-name: { darwin, pkgs, lib, home-manager, system, user }:
+name: { darwin, pkgs, lib, home-manager, system, user, paseoPackage ? null }:
 
 darwin.lib.darwinSystem {
   inherit system;
@@ -10,6 +10,7 @@ darwin.lib.darwinSystem {
     ../machines/${name}.nix
     ../machines/shared.nix
     ../darwin/configuration.nix
+    ../darwin/guest-wm.nix           # no-op on host (self-gated on tailvisor.guest)
 
     { 
       documentation.enable = false; 
@@ -27,7 +28,7 @@ darwin.lib.darwinSystem {
       home-manager.useGlobalPkgs = true;
       home-manager.backupFileExtension = "backup";
       home-manager.users.${user} = import ../users/default/home-manager.nix {
-          inherit lib pkgs;
+          inherit lib pkgs paseoPackage;
       };
     }
 

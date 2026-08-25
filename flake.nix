@@ -145,6 +145,8 @@
         system = "aarch64-darwin";
         pkgs = import nixpkgs { inherit system; };
         lib = pkgs.lib;
+        # Paseo daemon on the guest (darwin analog of the Linux LLM VM).
+        paseoPackage = inputs.paseo.packages.${system}.paseo;
       };
 
     };
