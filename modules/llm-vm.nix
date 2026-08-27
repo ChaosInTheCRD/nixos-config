@@ -162,6 +162,8 @@ in
     pkgs.codex
     pkgs.opencode
     pkgs.claude-code
+    # paseo's voice models ship as .tar.bz2; tar needs bzip2 to extract them
+    pkgs.bzip2
   ];
 
   systemd.user.startServices = "sd-switch";
