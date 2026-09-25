@@ -12,7 +12,6 @@ with pkgs;
       ## hehehe
       openjdk maven
 
-      # vibes
       # NOTE: claude-code comes from the Homebrew cask (auto-updates), NOT nixpkgs.
       # nixpkgs lags, and paseo hides the newest models when its resolved `claude`
       # is below each model's minimumClaudeCodeVersion (Opus 5 needs >= 2.1.219).

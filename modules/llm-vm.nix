@@ -161,6 +161,7 @@ in
     pkgs.socat
     pkgs.codex
     pkgs.opencode
+    pkgs.claude-code
   ];
 
   systemd.user.startServices = "sd-switch";

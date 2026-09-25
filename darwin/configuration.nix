@@ -41,8 +41,6 @@ in
     onActivation = {
       autoUpdate = false;                 # Auto update packages
       upgrade = false;
-      # This nix-darwin pin emits the removed --cleanup flag for "zap".
-      # Keep zap cleanup through Homebrew's supported flags until it is updated.
       cleanup = "none";
       extraFlags = [ "--force-cleanup" "--zap" ];
     };
@@ -90,8 +88,6 @@ in
       "alacritty"
       "slack"
       "spotify"
-      "claude-code@latest"                 # New models reach this channel before the stable cask
-      "codex"                             # OpenAI Codex CLI — gets the same machine context as Claude (darwin/modules/claude)
       "notion"
       "raycast"
       "transmission"
@@ -101,7 +97,6 @@ in
       "visual-studio-code"
       "tidal"
       "insomnia"
-      "nordvpn"
       "nordpass"
       "iterm2"
       # installs new version that I do not like
@@ -112,6 +107,8 @@ in
       "sf-symbols"
       "hiddenbar"
     ] ++ lib.optionals isGuest [
+      "nordvpn"
+      "claude-code"
       "paseo"                             # paseo app runs in the VM only, not the host
     ];
   };

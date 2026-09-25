@@ -20,7 +20,10 @@
 #     an en0 IP change, and tears down so launchd re-checks from the gate.
 #
 # Config via env (the launchd daemon sets these). EN0_IP is auto-detected:
-#   IPHONE_IP  phone's long-lived tailnet IPv4     (e.g. 100.110.252.17)
+#   IPHONE_IPS  space-separated phone tailnet IPv4s in PRIORITY order; the first
+#               one that answers on :49152 is used (e.g. personal tailnet first,
+#               corp tailnet as fallback). Only the tailnet the host is currently
+#               logged into is routable, so probing lets one config work on either.
 #   INSTANCE   phone's _remotepairing instance UUID
 #   AUTHTAG    phone's _remotepairing authTag
 #   HOST       phone's .local hostname             (e.g. Toms-iPhone.local)
@@ -28,7 +31,7 @@
 #   RECHECK    seconds between active re-checks     (default 30)
 set -uo pipefail
 
-IPHONE_IP="${IPHONE_IP:?set IPHONE_IP (phone tailnet IPv4)}"
+IPHONE_IPS="${IPHONE_IPS:?set IPHONE_IPS (space-separated phone tailnet IPv4s, priority order)}"
 INSTANCE="${INSTANCE:?set INSTANCE (phone _remotepairing UUID)}"
 AUTHTAG="${AUTHTAG:?set AUTHTAG}"
 HOST="${HOST:-Toms-iPhone.local}"
@@ -47,6 +50,18 @@ phone_is_local() {
     | grep -i "Add" | grep -q "$INSTANCE"
 }
 
+# TCP-reachability probe for the phone's front door (:49152) on a candidate IP.
+reachable() { nc -z -G 3 -w 3 "$1" 49152 >/dev/null 2>&1; }
+
+# First candidate that answers on :49152, in priority order. Only the tailnet the
+# host is currently on is routable, so this picks personal-then-corp correctly.
+pick_target() {
+  for ip in $IPHONE_IPS; do
+    reachable "$ip" && { echo "$ip"; return 0; }
+  done
+  return 1
+}
+
 # GATE: never spoof while the phone is home (collision + shadows real record).
 if phone_is_local; then
   echo "$(date '+%H:%M:%S') phone is on the local network -- bridge stands down"
@@ -57,18 +72,24 @@ fi
 EN0_IP="$(ipconfig getifaddr en0 2>/dev/null || true)"
 [ -n "$EN0_IP" ] || { echo "en0 has no IPv4 -- host not on a network"; sleep 20; exit 1; }
 
+# Pick the reachable tailnet IP (personal first, corp fallback). If none answer,
+# the phone is remote but unreachable on any tailnet (offline, or host on neither
+# tailnet) -- stand down so we never shadow it with a dead relay; launchd re-checks.
+TARGET="$(pick_target || true)"
+[ -n "$TARGET" ] || { echo "$(date '+%H:%M:%S') phone remote but no tailnet IP answers on :49152 -- standing down"; sleep 20; exit 0; }
+
 ulimit -n 8192 2>/dev/null || true
-echo "$(date '+%H:%M:%S') phone remote -- spoofing $INSTANCE on en0 $EN0_IP -> $IPHONE_IP"
+echo "$(date '+%H:%M:%S') phone remote -- spoofing $INSTANCE on en0 $EN0_IP -> $TARGET"
 
 dns-sd -P "$INSTANCE" _remotepairing._tcp local 49152 "$HOST" "$EN0_IP" \
   identifier="$INSTANCE" authTag="$AUTHTAG" ver=24 minVer=8 flags=0 \
   > "$SPOOF_LOG" 2>&1 &
 
-socat TCP-LISTEN:49152,bind=$EN0_IP,reuseaddr,fork TCP:$IPHONE_IP:49152 &
-socat UDP-LISTEN:49152,bind=$EN0_IP,reuseaddr,fork UDP:$IPHONE_IP:49152 &
+socat TCP-LISTEN:49152,bind=$EN0_IP,reuseaddr,fork TCP:$TARGET:49152 &
+socat UDP-LISTEN:49152,bind=$EN0_IP,reuseaddr,fork UDP:$TARGET:49152 &
 for port in $(seq "$PORT_LO" "$PORT_HI"); do
-  socat TCP-LISTEN:$port,bind=$EN0_IP,reuseaddr,fork TCP:$IPHONE_IP:$port &
-  socat UDP-LISTEN:$port,bind=$EN0_IP,reuseaddr,fork UDP:$IPHONE_IP:$port &
+  socat TCP-LISTEN:$port,bind=$EN0_IP,reuseaddr,fork TCP:$TARGET:$port &
+  socat UDP-LISTEN:$port,bind=$EN0_IP,reuseaddr,fork UDP:$TARGET:$port &
 done
 
 # WATCHDOG: stand down if the phone returns to the LAN (spoof reports a name
@@ -81,6 +102,10 @@ while true; do
   fi
   if [ "$(ipconfig getifaddr en0 2>/dev/null || true)" != "$EN0_IP" ]; then
     echo "$(date '+%H:%M:%S') en0 IP changed; restarting to rebind"
+    exit 0
+  fi
+  if ! reachable "$TARGET"; then
+    echo "$(date '+%H:%M:%S') target $TARGET stopped answering on :49152; restarting to re-pick"
     exit 0
   fi
 done

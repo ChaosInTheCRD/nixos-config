@@ -82,11 +82,16 @@ in {
     ThrottleInterval = 20;            # don't hot-loop while the phone is home
     ProcessType = "Background";
     EnvironmentVariables = {
-      IPHONE_IP = "100.110.252.17";                          # phone tailnet IPv4 (long-lived)
+      # Phone tailnet IPv4s in PRIORITY order: personal tailnet first, corp
+      # tailnet as fallback. The host can only route the tailnet it's logged
+      # into, so the script relays to whichever answers on :49152.
+      IPHONE_IPS = "100.110.252.17 100.89.231.128";          # personal, then corp
       INSTANCE  = "74080433-2AB8-49B0-9091-BC236941E444";    # phone _remotepairing instance UUID
       AUTHTAG   = "qIVJ7YLb";                                # phone _remotepairing authTag
       HOST      = "Toms-iPhone.local";
-      PATH = "${pkgs.socat}/bin:/usr/bin:/bin:/usr/sbin:/sbin";
+      # coreutils for `timeout` -- the phone-is-local gate depends on it; without
+      # it the gate fails open and the bridge spoofs even while the phone is home.
+      PATH = "${pkgs.socat}/bin:${pkgs.coreutils}/bin:/usr/bin:/bin:/usr/sbin:/sbin";
     };
     StandardOutPath = "/var/log/coredevice-tailnet-bridge.out.log";
     StandardErrorPath = "/var/log/coredevice-tailnet-bridge.err.log";
