@@ -57,6 +57,7 @@ llm_ssh "mkdir -p ~/work/poc-$SLUG && [ -f ~/work/poc-$SLUG/LOG.md ] || echo '# 
 CONTEXT_FILE="work/poc-$SLUG/spec.md"
 printf '%s\n' "$SPEC" | llm_ssh "cat > ~/$CONTEXT_FILE"
 
+PROVIDER="$(normalize_paseo_provider "$PROVIDER")"
 WS_TITLE="${WS_TITLE:-$(ws_title_from "poc $SLUG")}"
 AGENT_ARGS=(run --background --provider "$PROVIDER" --thinking "$THINKING" --title "poc: $SLUG")
 

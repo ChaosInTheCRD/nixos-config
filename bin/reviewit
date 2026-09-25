@@ -115,6 +115,7 @@ $DEPTH
   edits there, no pushes)."
 
 # drop the owner from the label for the title: tailscale/corp#123 -> corp#123
+PROVIDER="$(normalize_paseo_provider "$PROVIDER")"
 WS_TITLE="${WS_TITLE:-$(ws_title_from "review ${LABEL#*/}")}"
 IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation local \
     --path "$VMHOME/$VM_REPO" --title "$WS_TITLE")

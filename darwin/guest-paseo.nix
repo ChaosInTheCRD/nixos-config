@@ -9,10 +9,15 @@
 #     inbound proxy dials the guest's virtio IP, so a 127.0.0.1 bind refuses
 #     every tailnet connection. Paseo OWNS this file at runtime (hostnames
 #     and pairings accumulate as devices pair), so nix must not manage it
-#     outright: activation seeds it if absent and surgically rewrites just
-#     the daemon.listen field if it's wrong, leaving everything else alone.
+#     outright: activation seeds it if absent and surgically merges only the
+#     settings this module owns, leaving everything else alone.
 #
-#  2. The tailnet only reaches guest ports the hypervisor maps. tailvisor
+#  2. Paseo's Codex provider launches the model-neutral codex-headroom wrapper.
+#     Paseo remains responsible for selecting Sol or Astra per thread; the
+#     wrapper only adds Headroom compression. RTK is picked up independently
+#     through the shared Codex AGENTS.md instructions.
+#
+#  3. The tailnet only reaches guest ports the hypervisor maps. tailvisor
 #     must run with --publish (6767 or any); a LaunchAgent here requests the
 #     NAT-PMP mapping from the virtual gateway and re-requests every 25min
 #     (TTL 3600s), so the mapping survives indefinitely without manual
@@ -60,17 +65,23 @@ in
         chown ${user}:staff "$PASEO_CFG"
         echo "paseo: seeded $PASEO_CFG (listen 0.0.0.0:6767)"
       else
-        # Surgical fix of daemon.listen only; pairings/hostnames untouched.
+        # Surgical merge of the settings nix owns; pairings/hostnames and all
+        # unrelated runtime state remain untouched.
         ${pkgs.python3}/bin/python3 - "$PASEO_CFG" <<'PYEOF'
       import json, sys
       p = sys.argv[1]
       cfg = json.load(open(p))
+      changed = False
       daemon = cfg.setdefault("daemon", {})
       listen = daemon.get("listen", "")
       if listen.startswith("127.0.0.1") or listen.startswith("localhost") or not listen:
           daemon["listen"] = "0.0.0.0:6767"
-          json.dump(cfg, open(p, "w"), indent=2)
+          changed = True
           print("paseo: rewrote daemon.listen to 0.0.0.0:6767 (was %r)" % listen)
+
+      if changed:
+          with open(p, "w") as f:
+              json.dump(cfg, f, indent=2)
       PYEOF
       fi
     '';
@@ -82,7 +93,11 @@ in
       serviceConfig = {
         ProgramArguments = [ "${pkgs.python3}/bin/python3" "${publishPy}" ];
         RunAtLoad = true;
-        StartInterval = 1500; # 25min; TTL is 60min
+        # A tailvisor restart wipes the mapping table (NAT-PMP state is
+        # in-memory), so the renewal interval bounds the outage after any
+        # restart. 2min keeps that window short; the request is one UDP
+        # packet, so aggressive polling costs nothing.
+        StartInterval = 120; # TTL is 60min
         StandardOutPath = "/Users/${user}/.paseo/publish.log";
         StandardErrorPath = "/Users/${user}/.paseo/publish.log";
       };

@@ -35,6 +35,16 @@ vm_repo_dir() { # $1=owner/repo
     echo "Git/$(basename "$1")"
 }
 
+# Friendly Paseo model presets. Full provider/model strings still pass through
+# unchanged, and the default remains controlled by TAKE_PROVIDER.
+normalize_paseo_provider() { # $1=provider or preset
+    case "$1" in
+        sol) echo "codex/gpt-5.6-sol" ;;
+        astra) echo "codex/gpt-6-astra" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 # Create a paseo workspace on the VM; echoes "<workspace-id>\t<cwd>".
 # Args are passed through to `paseo workspace create` (e.g. --isolation,
 # --path, --title, --mode/--new-branch/--worktree-slug for worktrees).

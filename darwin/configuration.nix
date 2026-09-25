@@ -41,9 +41,12 @@ in
     onActivation = {
       autoUpdate = false;                 # Auto update packages
       upgrade = false;
-      cleanup = "zap";                    # Uninstall not listed packages and casks
+      # This nix-darwin pin emits the removed --cleanup flag for "zap".
+      # Keep zap cleanup through Homebrew's supported flags until it is updated.
+      cleanup = "none";
+      extraFlags = [ "--force-cleanup" "--zap" ];
     };
-    # Guest gets the SAME Homebrew set as the host (cleanup = "zap" removes
+    # Guest gets the SAME Homebrew set as the host (zap cleanup removes
     # anything undeclared, so the guest must declare everything it needs).
     taps = [
       "FelixKratz/formulae"
@@ -53,6 +56,7 @@ in
     ];
     brews = [
       "pipx"                              # ios-deploy: pymobiledevice3 venv (host runs tunneld, guest drives) — see modules/ios-deploy
+      "python@3.13"                       # Stable pipx interpreter for Headroom (3.14 wheel support still varies)
       "FelixKratz/formulae/sketchybar"
       "theseal/ssh-askpass/ssh-askpass"
       "ddcctl"
@@ -86,7 +90,8 @@ in
       "alacritty"
       "slack"
       "spotify"
-      "claude-code"
+      "claude-code@latest"                 # New models reach this channel before the stable cask
+      "codex"                             # OpenAI Codex CLI — gets the same machine context as Claude (darwin/modules/claude)
       "notion"
       "raycast"
       "transmission"

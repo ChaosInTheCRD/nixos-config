@@ -42,15 +42,16 @@ The hypervisor bridges the **host's** clipboard at `http://192.168.72.1:9550/cli
 
 No YubiKey in the VM, so this guest **signs commits with a software SSH key**
 (`~/.ssh/id_ed25519`, `gpg.format = ssh`) — not the host's GPG key. Push is over **HTTPS via
-the `gh` credential helper**, so `gh` must be signed in (`gh auth status`). Commit messages
-end with the standard `Co-Authored-By` / `Claude-Session` trailers.
+the `gh` credential helper**, so `gh` must be signed in (`gh auth status`). Agent commits
+end with your standard attribution trailers (`Co-Authored-By`, session link if you have one).
 
 ## Applying config changes (nix-darwin) — everything is driven from nixos-config
 
 This machine is nix-darwin. Dotfiles under `~/.config` (git, zsh, ghostty, kitty, sketchybar,
 …) **and this very file** are **read-only symlinks into / managed by the nix store** — do NOT
 `git config --global`, append to `~/.zshrc`, run `gh auth setup-git`, or hand-edit
-`~/.claude/CLAUDE.md`; those either fail or get reverted. Change the source in
+`~/.claude/CLAUDE.md` / `~/.codex/AGENTS.md` (both are the same shared file, sourced from
+`darwin/modules/claude/CLAUDE.md`); those either fail or get reverted. Change the source in
 `~/Git/nixos-config` and apply:
 
 ```sh
@@ -71,6 +72,13 @@ The paseo daemon listens on `:6767` and is reachable over the tailnet at
 `http://tailvisor.tail7373cb.ts.net:6767`. Bind address and host allowlist are set via
 `PASEO_LISTEN` / `PASEO_HOSTNAMES` env in nixos-config (`modules/paseo-darwin.nix`), and the
 tailnet port is published by a NAT-PMP agent (`darwin/guest-paseo.nix`).
+
+## Token-efficient shell output
+
+Use `rtk` for shell commands whenever it supports the command, so noisy output is filtered
+before it enters the agent context (for example, `rtk git status`, `rtk pytest -q`, and
+`rtk npm test`). Use `rtk proxy <command>` when exact, unfiltered output is required. Run
+`rtk gain` to inspect the measured savings.
 
 ## Visual tells you're in the VM
 

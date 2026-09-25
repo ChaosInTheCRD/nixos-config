@@ -43,6 +43,15 @@
         external_bar = "all:28:0";   # reserve the top strip for sketchybar
       };
       extraConfig = ''
+        # Load the scripting addition at yabai startup and again whenever Dock
+        # restarts (the SA payload lives inside the Dock process and dies with
+        # it). The org.nixos.yabai-sa boot daemon runs before login, so its
+        # load never survives into the user session. Must be the literal store
+        # path: the sudoers NOPASSWD rule pins it, and sudo matches the path
+        # as typed - via /run/current-system it prompts for a password.
+        sudo ${config.services.yabai.package}/bin/yabai --load-sa
+        yabai -m signal --add event=dock_did_restart action="sudo ${config.services.yabai.package}/bin/yabai --load-sa"
+
         # Let macOS system dialogs float instead of being tiled.
         yabai -m rule --add app='^System Settings$' manage=off
         yabai -m rule --add app='^System Information$' manage=off

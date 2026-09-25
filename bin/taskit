@@ -142,6 +142,7 @@ ${REVIEW_BLOCK}5. Finish with a summary entry in the log (work log $SLUG \"...\"
 Useful here: 'gh' for GitHub data (read-only, maintner-backed, no auth
 needed); private tailscale repos clone via plain github.com URLs (rogitproxy)."
 
+PROVIDER="$(normalize_paseo_provider "$PROVIDER")"
 WS_TITLE="${WS_TITLE:-$(ws_title_from "$SLUG")}"
 echo "==> Creating workspace \"$WS_TITLE\" (worktree branch $BRANCH in ~/$VM_REPO)"
 IFS=$'\t' read -r WS_ID WS_CWD < <(vm_workspace_create --isolation worktree \

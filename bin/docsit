@@ -75,6 +75,7 @@ NOTES_BLOCK=""
 
 VMHOME=$(llm_ssh 'echo "$HOME"')
 DOCS_BRANCH="chaosinthecrd/docs-$SLUG"
+PROVIDER="$(normalize_paseo_provider "$PROVIDER")"
 WS_TITLE="${WS_TITLE:-$(ws_title_from "docs $SLUG")}"
 
 echo "==> Creating workspace \"$WS_TITLE\" (worktree branch $DOCS_BRANCH in ~/Git/tailscale-www)"
