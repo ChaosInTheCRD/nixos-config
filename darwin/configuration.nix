@@ -44,8 +44,8 @@ in
       cleanup = "none";
       extraFlags = [ "--force-cleanup" "--zap" ];
     };
-    # Guest gets the SAME Homebrew set as the host (zap cleanup removes
-    # anything undeclared, so the guest must declare everything it needs).
+    # Shared packages. Machine-specific additions belong in machines/<name>.nix
+    # and merge with these lists; zap cleanup removes anything undeclared.
     taps = [
       "FelixKratz/formulae"
       # "homebrew/cask-drivers"
@@ -106,10 +106,6 @@ in
       "microsoft-teams"
       "sf-symbols"
       "hiddenbar"
-    ] ++ lib.optionals isGuest [
-      "nordvpn"
-      "claude-code"
-      "paseo"                             # paseo app runs in the VM only, not the host
     ];
   };
 

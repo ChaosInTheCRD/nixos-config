@@ -8,6 +8,20 @@
   # scripting addition can load — that's what makes space switching instant.
   tailvisor.guest = true;
 
+  # Homebrew additions for THIS machine only. These lists merge with the
+  # shared packages in darwin/configuration.nix. Keep agent CLIs here so
+  # they are never installed on the physical MacBook.
+  homebrew = {
+    taps = [];
+    brews = [];
+    casks = [
+      "nordvpn"
+      "claude-code@latest"
+      "codex"
+      "paseo"
+    ];
+  };
+
   networking = {
     computerName = "tailvisor macos";
     hostName = "macbook-tailvisor-macos";
